@@ -19,7 +19,9 @@ export default function Header() {
         <nav className="flex items-center gap-1 text-sm font-medium sm:gap-2 sm:text-base">
           {navItems.map((item, index) => (
             <span key={item.href} className="flex items-center">
-              {index > 0 && <span className="mx-1 text-[#3f679b]/|</span>}
+              {index > 0 && (
+  <span className="mx-1 text-[#3f679b]">|</span>
+)}
               <Link
                 href={item.href}
                 className="text-[#3f679b] hover:underline"
