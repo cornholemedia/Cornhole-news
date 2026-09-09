@@ -5,6 +5,7 @@
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   username text unique not null,
+  is_admin boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -109,9 +110,49 @@ create policy "Authors can delete their own comments"
   on public.comments for delete
   using (auth.uid() = author_id);
 
+
+-- Authors can update their own posts; admins can update/delete any post
+create policy "Authors can update their own posts"
+  on public.posts for update
+  using (auth.uid() = author_id)
+  with check (auth.uid() = author_id);
+
+create policy "Admins can update any post"
+  on public.posts for update
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
+
+create policy "Admins can delete any post"
+  on public.posts for delete
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
+
+create policy "Admins can delete any comment"
+  on public.comments for delete
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.is_admin = true
+    )
+  );
+
 -- 5. A view that joins posts with vote counts, comment counts, and author name
 -- (This is what the homepage/new page actually query.)
-create or replace view public.posts_with_stats as
+create or replace view public.posts_with_stats with (security_invoker = true) as
 select
   p.id,
   p.title,
