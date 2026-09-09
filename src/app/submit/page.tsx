@@ -13,6 +13,7 @@ export default function SubmitPage() {
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [generatingTitle, setGeneratingTitle] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -23,6 +24,34 @@ export default function SubmitPage() {
       }
     });
   }, [router, supabase]);
+
+  async function handleGenerateTitle() {
+    setError(null);
+    const trimmed = url.trim();
+    if (!trimmed) {
+      setError("Paste a URL first, then generate a title.");
+      return;
+    }
+
+    setGeneratingTitle(true);
+    try {
+      const res = await fetch("/api/fetch-title", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      });
+      const data = (await res.json()) as { title?: string; error?: string };
+      if (!res.ok || !data.title) {
+        setError(data.error || "Could not generate a title from that URL.");
+        return;
+      }
+      setTitle(data.title);
+    } catch {
+      setError("Could not generate a title from that URL.");
+    } finally {
+      setGeneratingTitle(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -72,6 +101,30 @@ export default function SubmitPage() {
       <h1 className="mb-4 text-2xl font-bold">Submit</h1>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
+          <label className="mb-1 block text-sm text-[#666]">URL (optional)</label>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://"
+              className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px]"
+            />
+            <button
+              type="button"
+              onClick={handleGenerateTitle}
+              disabled={generatingTitle || !url.trim()}
+              className="shrink-0 rounded border border-[#3f679b] px-3 py-2 text-[14px] font-medium text-[#3f679b] hover:bg-[#3f679b]/10 disabled:opacity-60"
+            >
+              {generatingTitle ? "Generating…" : "Generate title"}
+            </button>
+          </div>
+          <p className="mt-1 text-[12px] text-[#666]">
+            For news links, paste the URL and generate a title from the article.
+          </p>
+        </div>
+
+        <div>
           <label className="mb-1 block text-sm text-[#666]">Title</label>
           <input
             type="text"
@@ -82,16 +135,7 @@ export default function SubmitPage() {
             className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px]"
           />
         </div>
-        <div>
-          <label className="mb-1 block text-sm text-[#666]">URL (optional)</label>
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://"
-            className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px]"
-          />
-        </div>
+
         <div>
           <label className="mb-1 block text-sm text-[#666]">
             Text (optional, for a discussion post instead of a link)
