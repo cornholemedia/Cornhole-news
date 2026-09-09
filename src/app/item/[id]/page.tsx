@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPostById } from "@/lib/posts";
 import { formatTimeAgo } from "@/lib/time";
 import Comments from "@/components/Comments";
+import AdminPostControls from "@/components/AdminPostControls";
 
 export const revalidate = 0;
 
@@ -53,6 +54,8 @@ export default async function ItemPage({
             {post.body}
           </p>
         )}
+
+        <AdminPostControls postId={post.id} authorId={post.author_id} />
       </div>
 
       <Comments postId={post.id} />
