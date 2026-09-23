@@ -35,6 +35,40 @@ By default Supabase requires email confirmation before login works. To skip
 this while testing: **Authentication → Providers → Email** → turn off
 "Confirm email". Turn it back on before going live publicly.
 
+### 5. Allow password-reset links
+Forgot-password uses Supabase's `resetPasswordForEmail` flow. No new Vercel
+environment variables are required — the app sends people back to
+`{the site they're on}/auth/callback`. Supabase will only do that if the URL
+is allowed.
+
+In the Supabase dashboard, open **Authentication → URL Configuration**:
+
+- **Site URL**: `https://cornhole-news.vercel.app`
+  (use `http://localhost:3000` only while testing on your own machine)
+- **Redirect URLs** — add every origin you use, with this exact path:
+  - `https://cornhole-news.vercel.app/auth/callback`
+  - `http://localhost:3000/auth/callback`
+
+This app uses `@supabase/ssr`, which is the PKCE flow. Supabase's default
+reset email only finishes signing the user in when the link is opened in the
+**same browser** that requested it. For a link that works from any device,
+open **Authentication → Emails → Reset password** and replace the template
+with `supabase/templates/recovery.html`:
+
+```html
+<h2>Reset your password</h2>
+
+<p>We received a request to reset your password. Follow the link below to choose a new one.</p>
+<p>
+  <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery">Reset password</a>
+</p>
+```
+
+`{{ .RedirectTo }}` is the `/auth/callback` URL from the forgot-password page.
+The callback checks the token, then sends the user to `/reset-password` to
+choose a new password. Keep the redirect URL free of a query string — the
+template adds `?token_hash=`.
+
 That's it — every time you push a change to GitHub, Vercel rebuilds and
 redeploys automatically.
 
@@ -42,7 +76,7 @@ redeploys automatically.
 
 ## What's actually live now
 
-- **Accounts** — sign up / log in / log out (Supabase Auth, email + password)
+- **Accounts** — sign up / log in / log out / forgot password (Supabase Auth, email + password)
 - **Submitting posts** — logged-in users can submit a link or text post (`/submit`)
 - **Voting** — logged-in users can upvote/un-upvote any post
 - **Comments** — logged-in users can comment on any post
@@ -80,6 +114,7 @@ Body formatting: a blank line starts a paragraph, `## Heading`, `- item`,
 ```
 supabase/schema.sql        → run this once in Supabase's SQL editor
 supabase/migrations/       → later SQL, including editable pages + is_admin lock
+supabase/templates/recovery.html → paste into the Reset password email template
 src/
   lib/supabase/
     client.ts               → Supabase client for browser/Client Components
@@ -93,6 +128,9 @@ src/
     item/[id]/page.tsx        → single post + comments
     user/[username]/page.tsx  → public profile + their submissions
     login/, signup/            → auth pages
+    forgot-password/           → request a reset email
+    reset-password/            → choose a new password after the email link
+    auth/callback/             → exchanges the Supabase reset link for a session
     submit/                    → post a new story
     about/, jobs/, advertise/  → static pages, content from the pages table
     admin/                     → admin-only editor for those pages
