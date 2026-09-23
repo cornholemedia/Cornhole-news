@@ -18,6 +18,7 @@ export default function Header() {
   const supabase = createClient();
   const router = useRouter();
   const [username, setUsername] = useState<string | null | undefined>(undefined);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -31,16 +32,20 @@ export default function Header() {
 
       if (!user) {
         setUsername(null);
+        setIsAdmin(false);
         return;
       }
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("username")
+        .select("username, is_admin")
         .eq("id", user.id)
         .single();
 
-      if (active) setUsername(profile?.username ?? null);
+      if (active) {
+        setUsername(profile?.username ?? null);
+        setIsAdmin(Boolean(profile?.is_admin));
+      }
     }
 
     load();
@@ -86,6 +91,11 @@ export default function Header() {
               <Link href={`/user/${username}`} className="text-[#3f679b] hover:underline">
                 {username}
               </Link>
+              {isAdmin && (
+                <Link href="/admin" className="text-[#3f679b] hover:underline">
+                  admin
+                </Link>
+              )}
               <button onClick={handleLogout} className="text-[#3f679b] hover:underline">
                 logout
               </button>
