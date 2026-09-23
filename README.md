@@ -10,7 +10,9 @@ now wired up to a real Supabase backend (auth, posts, voting, comments).
 2. Once it's ready, go to **SQL Editor** → **New query**.
 3. Open `supabase/schema.sql` in this repo, copy the whole file, paste it into
    the SQL editor, and click **Run**. This creates all the tables
-   (profiles, posts, votes, comments) and security rules.
+   (profiles, posts, votes, comments, pages) and security rules.
+   If the project already ran an older `schema.sql`, also run
+   `supabase/migrations/20260923_editable_pages.sql` the same way.
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -45,11 +47,39 @@ redeploys automatically.
 - **Voting** — logged-in users can upvote/un-upvote any post
 - **Comments** — logged-in users can comment on any post
 - **Top / New** — real ranked lists pulled from the database, not mock data
+- **About / Jobs / Advertise** — editable page copy stored in Supabase, with the
+  built-in text as a fallback until a page is saved
+
+## Editing About, Jobs, and Advertise
+
+Signed-in admins can change those three pages at `/admin` without a code deploy.
+Everyone else is redirected away, and row level security blocks writes from
+accounts that are not admins.
+
+1. Run `supabase/migrations/20260923_editable_pages.sql` in the Supabase **SQL Editor**
+   (skip this if you just ran a current `supabase/schema.sql` on a new project).
+2. Mark the account that should edit pages. In the SQL editor:
+
+```sql
+UPDATE profiles SET is_admin = true WHERE username = 'your_username';
+```
+
+Replace `your_username` with the username they signed up with. The public API
+cannot change `is_admin`; use the SQL editor (this also re-applies it for
+`Cornhole_Admin` if that profile exists).
+3. Log in as that user. The header shows an **admin** link. Open `/admin`, edit a
+   page, and save. `/about`, `/jobs`, and `/advertise` show the saved title,
+   subtitle, and body. A blank body keeps the built-in copy.
+
+Body formatting: a blank line starts a paragraph, `## Heading`, `- item`,
+`**bold**`, `[label](/path)` or `[label](https://example.com)`, and
+`note: smaller gray line`.
 
 ## Project structure
 
 ```
 supabase/schema.sql        → run this once in Supabase's SQL editor
+supabase/migrations/       → later SQL, including editable pages + is_admin lock
 src/
   lib/supabase/
     client.ts               → Supabase client for browser/Client Components
@@ -64,6 +94,8 @@ src/
     user/[username]/page.tsx  → public profile + their submissions
     login/, signup/            → auth pages
     submit/                    → post a new story
+    about/, jobs/, advertise/  → static pages, content from the pages table
+    admin/                     → admin-only editor for those pages
   components/
     Header.tsx                → nav bar, shows login state
     PostList.tsx / PostItem.tsx → post rendering
