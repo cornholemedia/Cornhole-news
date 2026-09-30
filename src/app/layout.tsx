@@ -21,11 +21,20 @@ export const metadata: Metadata = {
     description: DEFAULT_DESCRIPTION,
     url: getSiteUrl(),
     locale: "en_US",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Cornhole News — news, discussion, and community",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_NAME,
     description: DEFAULT_DESCRIPTION,
+    images: ["/opengraph-image"],
   },
 };
 

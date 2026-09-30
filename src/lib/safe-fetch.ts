@@ -55,8 +55,14 @@ function isPrivateIp(ip: string): boolean {
   return isPrivateIpv4(normalized);
 }
 
-function isBlockedHostname(hostname: string): boolean {
+function canonicalHostname(hostname: string): string {
   const host = hostname.toLowerCase().replace(/\.$/, "");
+  if (host.startsWith("[") && host.endsWith("]")) return host.slice(1, -1);
+  return host;
+}
+
+function isBlockedHostname(hostname: string): boolean {
+  const host = canonicalHostname(hostname);
   if (!host || host.includes("%")) return true;
   if (
     host === "localhost" ||
@@ -99,7 +105,7 @@ export async function assertPublicHttpUrl(raw: string): Promise<URL> {
     throw new Error("That URL is not allowed.");
   }
 
-  const hostname = parsed.hostname;
+  const hostname = canonicalHostname(parsed.hostname);
   if (isBlockedHostname(hostname)) {
     throw new Error("That URL is not allowed.");
   }
