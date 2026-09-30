@@ -36,15 +36,12 @@ export default function Header() {
   const pathname = usePathname();
   const [username, setUsername] = useState<string | null | undefined>(undefined);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
+  const [openPath, setOpenPath] = useState<string | null>(null);
+  const menuOpen = openPath === pathname;
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setMenuOpen(false);
+      if (event.key === "Escape") setOpenPath(null);
     }
 
     window.addEventListener("keydown", onKeyDown);
@@ -94,14 +91,18 @@ export default function Header() {
   }, [supabase]);
 
   async function handleLogout() {
-    setMenuOpen(false);
+    setOpenPath(null);
     await supabase.auth.signOut();
     router.push("/");
     router.refresh();
   }
 
   function closeMenu() {
-    setMenuOpen(false);
+    setOpenPath(null);
+  }
+
+  function toggleMenu() {
+    setOpenPath(menuOpen ? null : pathname);
   }
 
   function renderAuthLinks() {
@@ -148,7 +149,7 @@ export default function Header() {
             className="inline-flex items-center gap-2 rounded border border-[#3f679b]/40 bg-white/50 px-3 py-1.5 text-sm font-medium text-[#3f679b] lg:hidden"
             aria-expanded={menuOpen}
             aria-controls="site-menu"
-            onClick={() => setMenuOpen((open) => !open)}
+            onClick={toggleMenu}
           >
             <MenuIcon open={menuOpen} />
             {menuOpen ? "Close" : "Menu"}
