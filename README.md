@@ -11,8 +11,11 @@ now wired up to a real Supabase backend (auth, posts, voting, comments).
 3. Open `supabase/schema.sql` in this repo, copy the whole file, paste it into
    the SQL editor, and click **Run**. This creates all the tables
    (profiles, posts, votes, comments, pages) and security rules.
-   If the project already ran an older `schema.sql`, also run
-   `supabase/migrations/20260923_editable_pages.sql` the same way.
+   If the project already ran an older `schema.sql`, also run these files
+   the same way, in this order:
+   - `supabase/migrations/20260923_editable_pages.sql`
+   - `supabase/migrations/20260930_legal_pages.sql`
+   - `supabase/migrations/20260930_revoke_function_execute.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -24,9 +27,13 @@ now wired up to a real Supabase backend (auth, posts, voting, comments).
 
 ### 3. Connect the repo to Vercel
 1. Go to [vercel.com](https://vercel.com) → **Add New → Project** → import your GitHub repo.
-2. Before deploying, add two **Environment Variables**:
+2. Before deploying, add these **Environment Variables**:
    - `NEXT_PUBLIC_SUPABASE_URL` = your Supabase Project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = your Supabase anon public key
+   - `SHOW_ADS` = `true` only when you want the dashed ad boxes to show.
+     Leave it unset until real ads exist. Change it in Vercel, then redeploy.
+   - `NEXT_PUBLIC_SITE_URL` is optional. The site already uses
+     `https://cornholenews.news`. Set this only if the public address changes.
 3. Click **Deploy**. Vercel builds the site in the cloud — nothing runs on
    your machine.
 
@@ -43,11 +50,15 @@ is allowed.
 
 In the Supabase dashboard, open **Authentication → URL Configuration**:
 
-- **Site URL**: `https://cornhole-news.vercel.app`
+- **Site URL**: `https://cornholenews.news`
   (use `http://localhost:3000` only while testing on your own machine)
 - **Redirect URLs** — add every origin you use, with this exact path:
-  - `https://cornhole-news.vercel.app/auth/callback`
+  - `https://cornholenews.news/auth/callback`
+  - `https://cornhole-news-5.vercel.app/auth/callback`
   - `http://localhost:3000/auth/callback`
+
+`https://www.cornholenews.news` redirects to `https://cornholenews.news`.
+The old `https://cornhole-news.vercel.app` address is no longer used.
 
 This app uses `@supabase/ssr`, which is the PKCE flow. Supabase's default
 reset email only finishes signing the user in when the link is opened in the
@@ -81,17 +92,21 @@ redeploys automatically.
 - **Voting** — logged-in users can upvote/un-upvote any post
 - **Comments** — logged-in users can comment on any post
 - **Top / New** — real ranked lists pulled from the database, not mock data
-- **About / Jobs / Advertise** — editable page copy stored in Supabase, with the
+- **About / Jobs / Advertise / Privacy / Terms / Contact** — editable page copy stored in Supabase, with the
   built-in text as a fallback until a page is saved
+- **Ads** — the sidebar placeholders stay hidden unless `SHOW_ADS=true`
 
-## Editing About, Jobs, and Advertise
+## Editing site pages
 
-Signed-in admins can change those three pages at `/admin` without a code deploy.
+Signed-in admins can change About, Jobs, Advertise, Privacy, Terms, and Contact at `/admin` without a code deploy.
 Everyone else is redirected away, and row level security blocks writes from
 accounts that are not admins.
 
-1. Run `supabase/migrations/20260923_editable_pages.sql` in the Supabase **SQL Editor**
-   (skip this if you just ran a current `supabase/schema.sql` on a new project).
+1. In the Supabase **SQL Editor**, run `supabase/migrations/20260923_editable_pages.sql`
+   if you have not already, then run `supabase/migrations/20260930_legal_pages.sql`
+   and `supabase/migrations/20260930_revoke_function_execute.sql`.
+   Skip the older file if you just ran a current `supabase/schema.sql` on a new project,
+   but still run the two `20260930` files if those pages or function changes are not there yet.
 2. Mark the account that should edit pages. In the SQL editor:
 
 ```sql
@@ -102,8 +117,10 @@ Replace `your_username` with the username they signed up with. The public API
 cannot change `is_admin`; use the SQL editor (this also re-applies it for
 `Cornhole_Admin` if that profile exists).
 3. Log in as that user. The header shows an **admin** link. Open `/admin`, edit a
-   page, and save. `/about`, `/jobs`, and `/advertise` show the saved title,
-   subtitle, and body. A blank body keeps the built-in copy.
+   page, and save. The public page shows the saved title, subtitle, and body.
+   A blank body keeps the built-in copy. Privacy, Terms, and Contact start as
+   clearly marked placeholders — replace that text before treating them as final.
+   Contact shows an email address you can edit. It does not send mail by itself.
 
 Body formatting: a blank line starts a paragraph, `## Heading`, `- item`,
 `**bold**`, `[label](/path)` or `[label](https://example.com)`, and
@@ -113,7 +130,7 @@ Body formatting: a blank line starts a paragraph, `## Heading`, `- item`,
 
 ```
 supabase/schema.sql        → run this once in Supabase's SQL editor
-supabase/migrations/       → later SQL, including editable pages + is_admin lock
+supabase/migrations/       → later SQL: editable pages, legal pages, function locks
 supabase/templates/recovery.html → paste into the Reset password email template
 src/
   lib/supabase/
@@ -132,7 +149,8 @@ src/
     reset-password/            → choose a new password after the email link
     auth/callback/             → exchanges the Supabase reset link for a session
     submit/                    → post a new story
-    about/, jobs/, advertise/  → static pages, content from the pages table
+    about/, jobs/, advertise/  → pages, content from the pages table
+    privacy/, terms/, contact/ → same editor; contact is a placeholder email
     admin/                     → admin-only editor for those pages
   components/
     Header.tsx                → nav bar, shows login state
@@ -155,4 +173,13 @@ npm install
 cp .env.local.example .env.local   # then fill in your Supabase values
 npm run dev
 ```
+
+Optional local values in `.env.local`:
+
+- `SHOW_ADS=true` shows the dashed ad boxes. Leave it out to hide them.
+- `NEXT_PUBLIC_SITE_URL=http://localhost:3000` only if you want local links in
+  previews. Production should keep `https://cornholenews.news`.
+
+Vercel Web Analytics is included in the site. In the Vercel project, open
+**Analytics** and turn it on if the dashboard asks you to.
 Open [http://localhost:3000](http://localhost:3000)

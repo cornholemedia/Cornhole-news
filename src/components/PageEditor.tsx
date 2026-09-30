@@ -77,7 +77,10 @@ export default function PageEditor({ page }: { page: EditablePage }) {
 
     setSaving(false);
     if (saveError) {
-      setError(saveError.message);
+      const message = /pages_slug_check|check constraint/i.test(saveError.message)
+        ? "The database does not allow this page yet. In Supabase, open the SQL editor and run supabase/migrations/20260930_legal_pages.sql, then save again."
+        : saveError.message;
+      setError(message);
       return;
     }
 

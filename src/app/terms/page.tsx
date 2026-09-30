@@ -1,6 +1,6 @@
 import { createEditablePage } from "@/lib/editable-route";
 
-const page = createEditablePage("advertise");
+const page = createEditablePage("terms");
 
 export const revalidate = 0;
 export const generateMetadata = page.generateMetadata;

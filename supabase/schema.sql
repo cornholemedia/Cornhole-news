@@ -40,8 +40,8 @@ as $$
   );
 $$;
 
-revoke all on function public.is_admin() from public;
-grant execute on function public.is_admin() to anon, authenticated, service_role;
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated, service_role;
 
 create or replace function public.protect_profile_admin_flag()
 returns trigger
@@ -67,7 +67,8 @@ begin
 end;
 $$;
 
-revoke all on function public.protect_profile_admin_flag() from public;
+revoke all on function public.protect_profile_admin_flag() from public, anon;
+grant execute on function public.protect_profile_admin_flag() to authenticated, service_role;
 
 drop trigger if exists profiles_protect_admin_flag on public.profiles;
 create trigger profiles_protect_admin_flag
@@ -95,6 +96,11 @@ begin
   return new;
 end;
 $$ language plpgsql security definer set search_path = public;
+
+-- Signup runs this trigger as supabase_auth_admin, not as a site visitor.
+revoke all on function public.handle_new_user() from public, anon, authenticated;
+grant execute on function public.handle_new_user() to service_role;
+grant execute on function public.handle_new_user() to supabase_auth_admin;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -232,9 +238,9 @@ left join (
   select post_id, count(*) as comment_count from public.comments group by post_id
 ) c on c.post_id = p.id;
 
--- 6. Editable static pages (About, Jobs, Advertise)
+-- 6. Editable static pages (About, Jobs, Advertise, Privacy, Terms, Contact)
 create table if not exists public.pages (
-  slug text primary key check (slug in ('about', 'jobs', 'advertise')),
+  slug text primary key check (slug in ('about', 'jobs', 'advertise', 'privacy', 'terms', 'contact')),
   title text not null check (char_length(title) between 1 and 200),
   subtitle text not null default '' check (char_length(subtitle) <= 400),
   body text not null default '' check (char_length(body) <= 20000),
@@ -276,7 +282,8 @@ begin
 end;
 $$;
 
-revoke all on function public.touch_page_row() from public;
+revoke all on function public.touch_page_row() from public, anon;
+grant execute on function public.touch_page_row() to authenticated, service_role;
 
 drop trigger if exists pages_touch_row on public.pages;
 create trigger pages_touch_row
@@ -304,7 +311,7 @@ The site is inspired by classic link aggregators and is built to stay simple, fa
     'Cornhole-related job openings and opportunities.',
     $jobs$## No jobs posted yet
 
-note: Check back later, or [contact us](/advertise) if you'd like to post a position.$jobs$
+note: Check back later, or [contact us](/contact) if you'd like to post a position.$jobs$
   ),
   (
     'advertise',
@@ -315,8 +322,42 @@ note: Check back later, or [contact us](/advertise) if you'd like to post a posi
 - **Sidebar 300×250** — Standard medium rectangle
 - **Sidebar 300×600** — Tall skyscraper unit
 
-Interested in advertising? Reach out and we'll get back to you with rates and availability.
+Interested in advertising? [Contact us](/contact) and we'll get back to you with rates and availability.$advertise$
+  ),
+  (
+    'privacy',
+    'Privacy Policy',
+    'PLACEHOLDER — replace this with your real privacy policy.',
+    $privacy$## PLACEHOLDER — not a real privacy policy
 
-note: (Contact form / email will be added here once the site is live.)$advertise$
+This page is starter text so the site has a privacy link. It is not legal advice and it does not describe a finished privacy policy.
+
+Replace every paragraph here with your own policy before you treat this page as official. Say what you collect (for example account email, username, posts, and comments), why you collect it, and how people can reach you.
+
+note: Owner: edit this page from the admin screen and replace this placeholder.$privacy$
+  ),
+  (
+    'terms',
+    'Terms of Use',
+    'PLACEHOLDER — replace this with your real terms of use.',
+    $terms$## PLACEHOLDER — not real terms of use
+
+This page is starter text so the site has a terms link. It is not legal advice and it is not a finished terms of use.
+
+Replace every paragraph here with the rules you want for accounts, posts, comments, and advertising.
+
+note: Owner: edit this page from the admin screen and replace this placeholder.$terms$
+  ),
+  (
+    'contact',
+    'Contact',
+    'PLACEHOLDER — replace this with how people should reach Cornhole News.',
+    $contact$## PLACEHOLDER — add your real contact details
+
+This page does not send messages anywhere yet. Replace the address below with the email you want people to use.
+
+Email: [replace-this@example.com](mailto:replace-this@example.com)
+
+note: Owner: edit this page and put in a real email address. No contact form is connected.$contact$
   )
 on conflict (slug) do nothing;

@@ -20,8 +20,8 @@ as $$
   );
 $$;
 
-revoke all on function public.is_admin() from public;
-grant execute on function public.is_admin() to anon, authenticated, service_role;
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated, service_role;
 
 create or replace function public.protect_profile_admin_flag()
 returns trigger
@@ -47,7 +47,8 @@ begin
 end;
 $$;
 
-revoke all on function public.protect_profile_admin_flag() from public;
+revoke all on function public.protect_profile_admin_flag() from public, anon;
+grant execute on function public.protect_profile_admin_flag() to authenticated, service_role;
 
 -- Promote the known admin before the guard trigger exists, so the first run
 -- does not depend on there already being an admin JWT.
@@ -67,7 +68,7 @@ grant insert (id, username) on table public.profiles to authenticated;
 
 -- 2. Static page content. Public read; only is_admin can write (see policies).
 create table if not exists public.pages (
-  slug text primary key check (slug in ('about', 'jobs', 'advertise')),
+  slug text primary key check (slug in ('about', 'jobs', 'advertise', 'privacy', 'terms', 'contact')),
   title text not null check (char_length(title) between 1 and 200),
   subtitle text not null default '' check (char_length(subtitle) <= 400),
   body text not null default '' check (char_length(body) <= 20000),
@@ -113,7 +114,8 @@ begin
 end;
 $$;
 
-revoke all on function public.touch_page_row() from public;
+revoke all on function public.touch_page_row() from public, anon;
+grant execute on function public.touch_page_row() to authenticated, service_role;
 
 drop trigger if exists pages_touch_row on public.pages;
 create trigger pages_touch_row
@@ -141,7 +143,7 @@ The site is inspired by classic link aggregators and is built to stay simple, fa
     'Cornhole-related job openings and opportunities.',
     $jobs$## No jobs posted yet
 
-note: Check back later, or [contact us](/advertise) if you'd like to post a position.$jobs$
+note: Check back later, or [contact us](/contact) if you'd like to post a position.$jobs$
   ),
   (
     'advertise',
@@ -152,8 +154,6 @@ note: Check back later, or [contact us](/advertise) if you'd like to post a posi
 - **Sidebar 300×250** — Standard medium rectangle
 - **Sidebar 300×600** — Tall skyscraper unit
 
-Interested in advertising? Reach out and we'll get back to you with rates and availability.
-
-note: (Contact form / email will be added here once the site is live.)$advertise$
+Interested in advertising? [Contact us](/contact) and we'll get back to you with rates and availability.$advertise$
   )
 on conflict (slug) do nothing;

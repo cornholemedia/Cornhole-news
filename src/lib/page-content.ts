@@ -1,4 +1,11 @@
-export const PAGE_SLUGS = ["about", "jobs", "advertise"] as const;
+export const PAGE_SLUGS = [
+  "about",
+  "jobs",
+  "advertise",
+  "privacy",
+  "terms",
+  "contact",
+] as const;
 
 export type PageSlug = (typeof PAGE_SLUGS)[number];
 
@@ -43,6 +50,24 @@ export const PAGE_PRESENTATION: Record<PageSlug, PagePresentation> = {
     cardClass: "rounded border border-[#e0e0e0] bg-white p-5",
     headingClass: "text-lg font-semibold",
   },
+  privacy: {
+    variant: "prose",
+    subtitleClass: "mb-6 text-[15px] leading-relaxed text-[#666]",
+    cardClass: "",
+    headingClass: "mb-2 text-lg font-semibold",
+  },
+  terms: {
+    variant: "prose",
+    subtitleClass: "mb-6 text-[15px] leading-relaxed text-[#666]",
+    cardClass: "",
+    headingClass: "mb-2 text-lg font-semibold",
+  },
+  contact: {
+    variant: "card",
+    subtitleClass: "mb-6 text-[15px] leading-relaxed",
+    cardClass: "rounded border border-[#e0e0e0] bg-white p-5",
+    headingClass: "text-lg font-semibold",
+  },
 };
 
 export const DEFAULT_PAGES: Record<PageSlug, Omit<StaticPageContent, "slug">> = {
@@ -60,7 +85,7 @@ The site is inspired by classic link aggregators and is built to stay simple, fa
     subtitle: "Cornhole-related job openings and opportunities.",
     body: `## No jobs posted yet
 
-note: Check back later, or [contact us](/advertise) if you'd like to post a position.`,
+note: Check back later, or [contact us](/contact) if you'd like to post a position.`,
   },
   advertise: {
     title: "Advertise on Cornhole News",
@@ -71,9 +96,40 @@ note: Check back later, or [contact us](/advertise) if you'd like to post a posi
 - **Sidebar 300×250** — Standard medium rectangle
 - **Sidebar 300×600** — Tall skyscraper unit
 
-Interested in advertising? Reach out and we'll get back to you with rates and availability.
+Interested in advertising? [Contact us](/contact) and we'll get back to you with rates and availability.`,
+  },
+  privacy: {
+    title: "Privacy Policy",
+    subtitle: "PLACEHOLDER — replace this with your real privacy policy.",
+    body: `## PLACEHOLDER — not a real privacy policy
 
-note: (Contact form / email will be added here once the site is live.)`,
+This page is starter text so the site has a privacy link. It is not legal advice and it does not describe a finished privacy policy.
+
+Replace every paragraph here with your own policy before you treat this page as official. Say what you collect (for example account email, username, posts, and comments), why you collect it, and how people can reach you.
+
+note: Owner: edit this page from the admin screen and replace this placeholder.`,
+  },
+  terms: {
+    title: "Terms of Use",
+    subtitle: "PLACEHOLDER — replace this with your real terms of use.",
+    body: `## PLACEHOLDER — not real terms of use
+
+This page is starter text so the site has a terms link. It is not legal advice and it is not a finished terms of use.
+
+Replace every paragraph here with the rules you want for accounts, posts, comments, and advertising.
+
+note: Owner: edit this page from the admin screen and replace this placeholder.`,
+  },
+  contact: {
+    title: "Contact",
+    subtitle: "PLACEHOLDER — replace this with how people should reach Cornhole News.",
+    body: `## PLACEHOLDER — add your real contact details
+
+This page does not send messages anywhere yet. Replace the address below with the email you want people to use.
+
+Email: [replace-this@example.com](mailto:replace-this@example.com)
+
+note: Owner: edit this page and put in a real email address. No contact form is connected.`,
   },
 };
 

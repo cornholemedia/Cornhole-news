@@ -1,7 +1,24 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import PostList from "@/components/PostList";
+import { pageMeta } from "@/lib/seo";
 
 export const revalidate = 0;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+  const name = decodeURIComponent(username);
+
+  return pageMeta({
+    title: name,
+    description: `Stories submitted by ${name} on Cornhole News.`,
+    path: `/user/${encodeURIComponent(name)}`,
+  });
+}
 
 export default async function UserPage({
   params,

@@ -1,9 +1,7 @@
-import StaticPageView from "@/components/StaticPageView";
-import { getPublishedPage } from "@/lib/pages";
+import { createEditablePage } from "@/lib/editable-route";
+
+const page = createEditablePage("jobs");
 
 export const revalidate = 0;
-
-export default async function JobsPage() {
-  const page = await getPublishedPage("jobs");
-  return <StaticPageView page={page} showEditLink />;
-}
+export const generateMetadata = page.generateMetadata;
+export default page.Page;
