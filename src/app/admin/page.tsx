@@ -11,7 +11,8 @@ export default async function AdminPagesIndex() {
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-2 text-2xl font-bold">Edit pages</h1>
       <p className="mb-6 text-[15px] leading-relaxed text-[#666]">
-        Change the About, Jobs, and Advertise pages. Posts still go through{" "}
+        Change About, Jobs, Advertise, Privacy, Terms, and Contact. Posts still go
+        through{" "}
         <Link href="/submit" className="text-[#3f679b] hover:underline">
           Submit
         </Link>
@@ -21,9 +22,17 @@ export default async function AdminPagesIndex() {
       {loadError && (
         <p className="mb-4 rounded border border-[#e0e0e0] bg-white p-4 text-sm text-red-600">
           Could not read stored pages ({loadError}). If this is a new database,
-          run <code>supabase/migrations/20260923_editable_pages.sql</code> in the
-          Supabase SQL editor. The public site keeps showing the built-in copy
-          until then.
+          run <code>supabase/migrations/20260923_editable_pages.sql</code> and{" "}
+          <code>supabase/migrations/20260930_legal_pages.sql</code> in the Supabase
+          SQL editor. The public site keeps showing the built-in copy until then.
+        </p>
+      )}
+
+      {!loadError && pages.some((page) => !page.stored) && (
+        <p className="mb-4 rounded border border-[#e0e0e0] bg-white p-4 text-sm text-[#666]">
+          Pages marked “built-in copy” are not saved in the database yet. To add
+          Privacy, Terms, and Contact, open the Supabase SQL editor and run{" "}
+          <code>supabase/migrations/20260930_legal_pages.sql</code>.
         </p>
       )}
 

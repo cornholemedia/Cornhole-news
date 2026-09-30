@@ -1,7 +1,15 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { pageMeta } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = pageMeta({
+  title: "Admin",
+  description: "Edit Cornhole News pages.",
+  path: "/admin",
+  noIndex: true,
+});
 
 export default async function AdminLayout({
   children,

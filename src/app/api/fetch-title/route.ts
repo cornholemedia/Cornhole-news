@@ -1,78 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
+import { fetchPublicHtml } from "@/lib/safe-fetch";
 
 export const runtime = "nodejs";
 
 const MAX_BYTES = 1_000_000;
 const TIMEOUT_MS = 8_000;
-
-function isPrivateOrLocalHost(hostname: string, ip: string): boolean {
-  const host = hostname.toLowerCase();
-  if (
-    host === "localhost" ||
-    host.endsWith(".localhost") ||
-    host.endsWith(".local") ||
-    host === "0.0.0.0"
-  ) {
-    return true;
-  }
-
-  if (ip.includes(":")) {
-    const normalized = ip.toLowerCase();
-    return (
-      normalized === "::1" ||
-      normalized.startsWith("fc") ||
-      normalized.startsWith("fd") ||
-      normalized.startsWith("fe80")
-    );
-  }
-
-  const parts = ip.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) return true;
-  const [a, b] = parts;
-  if (a === 10) return true;
-  if (a === 127) return true;
-  if (a === 0) return true;
-  if (a === 169 && b === 254) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 192 && b === 168) return true;
-  return false;
-}
-
-async function assertPublicHttpUrl(raw: string): Promise<URL> {
-  let parsed: URL;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    throw new Error("Enter a valid URL.");
-  }
-
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error("Only http and https URLs are supported.");
-  }
-
-  const hostname = parsed.hostname;
-  const literal = isIP(hostname);
-  if (literal) {
-    if (isPrivateOrLocalHost(hostname, hostname)) {
-      throw new Error("That URL is not allowed.");
-    }
-    return parsed;
-  }
-
-  const records = await lookup(hostname, { all: true });
-  if (!records.length) {
-    throw new Error("Could not resolve that host.");
-  }
-  for (const record of records) {
-    if (isPrivateOrLocalHost(hostname, record.address)) {
-      throw new Error("That URL is not allowed.");
-    }
-  }
-
-  return parsed;
-}
 
 function decodeHtmlEntities(value: string): string {
   return value
@@ -121,22 +53,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "URL is required." }, { status: 400 });
     }
 
-    const target = await assertPublicHttpUrl(rawUrl);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
     let response: Response;
     try {
-      response = await fetch(target.toString(), {
-        method: "GET",
-        redirect: "follow",
-        signal: controller.signal,
-        headers: {
-          "User-Agent":
-            "CornholeNewsTitleBot/1.0 (+https://cornhole-news-5.vercel.app)",
-          Accept: "text/html,application/xhtml+xml",
-        },
-      });
+      response = await fetchPublicHtml(rawUrl, controller.signal);
     } finally {
       clearTimeout(timer);
     }

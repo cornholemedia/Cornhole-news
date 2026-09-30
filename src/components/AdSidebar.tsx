@@ -1,8 +1,11 @@
+import { adsEnabled } from "@/lib/site";
+
 export default function AdSidebar() {
+  if (!adsEnabled()) return null;
+
   return (
     <aside className="hidden w-[300px] shrink-0 lg:block">
       <div className="sticky top-4 space-y-4">
-        {/* Primary ad slot */}
         <div className="rounded border border-[#e0e0e0] bg-white p-3 text-center">
           <p className="mb-2 text-xs uppercase tracking-wide text-[#666]">
             Advertisement
@@ -19,7 +22,6 @@ export default function AdSidebar() {
           </p>
         </div>
 
-        {/* Secondary taller slot */}
         <div className="rounded border border-[#e0e0e0] bg-white p-3 text-center">
           <p className="mb-2 text-xs uppercase tracking-wide text-[#666]">
             Advertisement

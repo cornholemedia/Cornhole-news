@@ -1,10 +1,43 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { getPostById } from "@/lib/posts";
 import { formatTimeAgo } from "@/lib/time";
 import Comments from "@/components/Comments";
 import AdminPostControls from "@/components/AdminPostControls";
+import { pageMeta, summarize } from "@/lib/seo";
 
 export const revalidate = 0;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const postId = Number(id);
+  const post = Number.isInteger(postId) ? await getPostById(postId) : null;
+
+  if (!post) {
+    return pageMeta({
+      title: "Story not found",
+      description: "That story is not on Cornhole News.",
+      path: `/item/${id}`,
+      noIndex: true,
+    });
+  }
+
+  const description = summarize(
+    post.body?.trim() || `A story shared on Cornhole News: ${post.title}`
+  );
+
+  return pageMeta({
+    title: post.title,
+    description,
+    path: `/item/${post.id}`,
+    ogType: "article",
+  });
+}
 
 export default async function ItemPage({
   params,
@@ -12,17 +45,11 @@ export default async function ItemPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const post = await getPostById(Number(id));
+  const postId = Number(id);
+  const post = Number.isInteger(postId) ? await getPostById(postId) : null;
 
   if (!post) {
-    return (
-      <div>
-        <p className="text-[15px] text-[#666]">Story not found.</p>
-        <Link href="/" className="text-sm text-[#3f679b] hover:underline">
-          &larr; Back to Top
-        </Link>
-      </div>
-    );
+    notFound();
   }
 
   const domain = post.url ? new URL(post.url).hostname.replace("www.", "") : null;
