@@ -107,7 +107,7 @@ export default function PageEditor({ page }: { page: EditablePage }) {
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label htmlFor="page-title" className="mb-1 block text-sm text-[#666]">
+          <label htmlFor="page-title" className="field-label">
             Title
           </label>
           <input
@@ -117,13 +117,13 @@ export default function PageEditor({ page }: { page: EditablePage }) {
             maxLength={TITLE_MAX}
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            className="w-full rounded border border-[#e0e0e0] bg-white px-3 py-2 text-[15px]"
+            className="field-input"
           />
         </div>
 
         <div>
-          <label htmlFor="page-subtitle" className="mb-1 block text-sm text-[#666]">
-            Subtitle <span className="text-[#999]">(optional)</span>
+          <label htmlFor="page-subtitle" className="field-label">
+            Subtitle <span className="text-[#5c5c5c]">(optional)</span>
           </label>
           <input
             id="page-subtitle"
@@ -131,12 +131,12 @@ export default function PageEditor({ page }: { page: EditablePage }) {
             maxLength={SUBTITLE_MAX}
             value={subtitle}
             onChange={(event) => setSubtitle(event.target.value)}
-            className="w-full rounded border border-[#e0e0e0] bg-white px-3 py-2 text-[15px]"
+            className="field-input"
           />
         </div>
 
         <div>
-          <label htmlFor="page-body" className="mb-1 block text-sm text-[#666]">
+          <label htmlFor="page-body" className="field-label">
             Body
           </label>
           <textarea
@@ -145,7 +145,7 @@ export default function PageEditor({ page }: { page: EditablePage }) {
             maxLength={BODY_MAX}
             value={body}
             onChange={(event) => setBody(event.target.value)}
-            className="w-full rounded border border-[#e0e0e0] bg-white px-3 py-2 font-mono text-[13px] leading-relaxed"
+            className="field-input font-mono text-[13px] leading-relaxed"
           />
           <ul className="mt-2 space-y-1 text-[12px] text-[#666]">
             <li>Blank line starts a new paragraph.</li>
@@ -170,7 +170,7 @@ export default function PageEditor({ page }: { page: EditablePage }) {
           <button
             type="submit"
             disabled={saving}
-            className="rounded bg-[#3f679b] px-4 py-2 text-[15px] font-medium text-white hover:bg-[#345580] disabled:opacity-60"
+            className="field-button rounded bg-[#3f679b] px-4 py-2 text-[15px] font-medium text-white hover:bg-[#345580] disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save"}
           </button>

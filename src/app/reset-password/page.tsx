@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import PasswordInput from "@/components/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
 
 const LINK_ERRORS: Record<string, string> = {
@@ -69,11 +70,21 @@ function ResetPasswordForm() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    setLoading(false);
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    if (updateError) {
+      setLoading(false);
+      setError(updateError.message);
+      return;
+    }
 
-    if (error) {
-      setError(error.message);
+    // updateUser does not sign this browser out. scope "others" revokes every
+    // other session and leaves the one that just set the password logged in.
+    const { error: signOutError } = await supabase.auth.signOut({ scope: "others" });
+    setLoading(false);
+    if (signOutError) {
+      setError(
+        "Your password was updated, but other signed-in devices could not be signed out. Please try again."
+      );
       return;
     }
 
@@ -85,7 +96,8 @@ function ResetPasswordForm() {
       <div className="mx-auto max-w-sm">
         <h1 className="mb-4 text-2xl font-bold">Password updated</h1>
         <p className="text-[15px] text-[#666]">
-          Your password has been changed. You&apos;re logged in and can{" "}
+          Your password has been changed, and other devices have been signed out. You&apos;re
+          still logged in here and can{" "}
           <Link href="/" className="text-[#3f679b] hover:underline">
             continue to Cornhole News
           </Link>
@@ -122,27 +134,29 @@ function ResetPasswordForm() {
       <p className="mb-4 text-[15px] text-[#666]">Choose a new password for your account.</p>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label className="mb-1 block text-sm text-[#666]">New password</label>
-          <input
-            type="password"
+          <label htmlFor="new-password" className="field-label">
+            New password
+          </label>
+          <PasswordInput
+            id="new-password"
             required
             minLength={6}
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px]"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm text-[#666]">Confirm password</label>
-          <input
-            type="password"
+          <label htmlFor="confirm-password" className="field-label">
+            Confirm password
+          </label>
+          <PasswordInput
+            id="confirm-password"
             required
             minLength={6}
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px]"
           />
         </div>
 
@@ -151,7 +165,7 @@ function ResetPasswordForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded bg-[#3f679b] px-4 py-2 text-[15px] font-medium text-white hover:bg-[#345580] disabled:opacity-60"
+          className="field-button w-full rounded bg-[#3f679b] px-4 py-2 text-[15px] font-medium text-white hover:bg-[#345580] disabled:opacity-60"
         >
           {loading ? "Updating..." : "Update password"}
         </button>

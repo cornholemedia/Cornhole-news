@@ -101,20 +101,23 @@ export default function SubmitPage() {
       <h1 className="mb-4 text-2xl font-bold">Submit</h1>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label className="mb-1 block text-sm text-[#666]">URL (optional)</label>
+          <label htmlFor="submit-url" className="field-label">
+            URL (optional)
+          </label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
+              id="submit-url"
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://"
-              className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px]"
+              className="field-input min-w-0 sm:flex-1"
             />
             <button
               type="button"
               onClick={handleGenerateTitle}
               disabled={generatingTitle || !url.trim()}
-              className="shrink-0 rounded border border-[#3f679b] px-3 py-2 text-[14px] font-medium text-[#3f679b] hover:bg-[#3f679b]/10 disabled:opacity-60"
+              className="field-button shrink-0 rounded border border-[#3f679b] px-3 py-2 text-[14px] font-medium text-[#3f679b] hover:bg-[#3f679b]/10 disabled:opacity-60"
             >
               {generatingTitle ? "Generating…" : "Generate title"}
             </button>
@@ -125,26 +128,30 @@ export default function SubmitPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm text-[#666]">Title</label>
+          <label htmlFor="submit-title" className="field-label">
+            Title
+          </label>
           <input
+            id="submit-title"
             type="text"
             required
             maxLength={300}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px]"
+            className="field-input"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm text-[#666]">
+          <label htmlFor="submit-body" className="field-label">
             Text (optional, for a discussion post instead of a link)
           </label>
           <textarea
+            id="submit-body"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={5}
-            className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px]"
+            className="field-input"
           />
         </div>
 
@@ -153,7 +160,7 @@ export default function SubmitPage() {
         <button
           type="submit"
           disabled={loading}
-          className="rounded bg-[#3f679b] px-4 py-2 text-[15px] font-medium text-white hover:bg-[#345580] disabled:opacity-60"
+          className="field-button rounded bg-[#3f679b] px-4 py-2 text-[15px] font-medium text-white hover:bg-[#345580] disabled:opacity-60"
         >
           {loading ? "Submitting..." : "Submit"}
         </button>

@@ -73,14 +73,17 @@ function ForgotPasswordForm() {
       </p>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label className="mb-1 block text-sm text-[#666]">Email</label>
+          <label htmlFor="forgot-email" className="field-label">
+            Email
+          </label>
           <input
+            id="forgot-email"
             type="email"
             required
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px]"
+            className="field-input"
           />
         </div>
 
@@ -89,7 +92,7 @@ function ForgotPasswordForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded bg-[#3f679b] px-4 py-2 text-[15px] font-medium text-white hover:bg-[#345580] disabled:opacity-60"
+          className="field-button w-full rounded bg-[#3f679b] px-4 py-2 text-[15px] font-medium text-white hover:bg-[#345580] disabled:opacity-60"
         >
           {loading ? "Sending..." : "Send reset link"}
         </button>

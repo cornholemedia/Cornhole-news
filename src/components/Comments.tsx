@@ -91,9 +91,10 @@ export default function Comments({ postId }: { postId: number }) {
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder={userId ? "Add a comment..." : "Log in to comment"}
+          aria-label={userId ? "Add a comment" : "Log in to comment"}
           disabled={!userId}
           rows={3}
-          className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px] disabled:bg-gray-50"
+          className="field-input"
         />
         {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         <div className="mt-2">
@@ -101,7 +102,7 @@ export default function Comments({ postId }: { postId: number }) {
             <button
               type="submit"
               disabled={loading}
-              className="rounded bg-[#3f679b] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#345580] disabled:opacity-60"
+              className="field-button rounded bg-[#3f679b] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#345580] disabled:opacity-60"
             >
               {loading ? "Posting..." : "Add comment"}
             </button>

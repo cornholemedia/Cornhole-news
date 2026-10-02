@@ -7,6 +7,14 @@
   --text: #000000;
   --muted: #666666;
   --border: #e0e0e0;
+  /* Form controls. Text is at least 4.5:1; borders and focus rings at least 3:1. */
+  --field-bg: #ffffff;
+  --field-text: #1a1a1a;
+  --field-border: #6b6b6b;
+  --field-label: #3a3a3a;
+  --field-placeholder: #5c5c5c;
+  --field-focus: #3f679b;
+  --field-disabled-bg: #f3f1ea;
 }
 
 @theme inline {
@@ -32,4 +40,60 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+@layer components {
+  .field-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--field-label);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  .field-input {
+    width: 100%;
+    border-radius: 0.25rem;
+    border: 1px solid var(--field-border);
+    background-color: var(--field-bg);
+    color: var(--field-text);
+    padding: 0.5rem 0.75rem;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .field-input::placeholder {
+    color: var(--field-placeholder);
+    opacity: 1;
+  }
+
+  .field-input:focus {
+    outline: 2px solid var(--field-focus);
+    outline-offset: 2px;
+    border-color: var(--field-focus);
+  }
+
+  .field-input:disabled {
+    background-color: var(--field-disabled-bg);
+    color: var(--field-label);
+    opacity: 1;
+    cursor: not-allowed;
+  }
+
+  .field-input:disabled::placeholder {
+    color: var(--field-placeholder);
+  }
+
+  .field-input:-webkit-autofill,
+  .field-input:-webkit-autofill:hover,
+  .field-input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--field-text);
+    caret-color: var(--field-text);
+    box-shadow: 0 0 0 1000px var(--field-bg) inset;
+  }
+
+  .field-button:focus-visible {
+    outline: 2px solid #1a1a1a;
+    outline-offset: 2px;
+  }
 }
