@@ -80,6 +80,9 @@ The callback checks the token, then sends the user to `/reset-password` to
 choose a new password. Keep the redirect URL free of a query string — the
 template adds `?token_hash=`.
 
+After the new password is saved, the site signs every other device out and
+keeps the browser that just changed the password logged in.
+
 That's it — every time you push a change to GitHub, Vercel rebuilds and
 redeploys automatically.
 
@@ -95,6 +98,32 @@ redeploys automatically.
 - **About / Jobs / Advertise / Privacy / Terms / Contact** — editable page copy stored in Supabase, with the
   built-in text as a fallback until a page is saved
 - **Ads** — the sidebar placeholders stay hidden unless `SHOW_ADS=true`
+
+## Adding a logo
+
+The header is ready for a logo next to the words “Cornhole News”. Nothing
+shows there until you add one, so the title and the mobile menu look the
+same as they do today.
+
+**Easiest:** add a file to the `public` folder and name it exactly one of
+these:
+
+- `logo.svg`
+- `logo.png`
+- `logo.webp`
+- `logo.jpg`
+- `logo.jpeg`
+
+Push that file to GitHub. The next deploy shows it to the left of the title.
+A wide logo is kept small so it does not cover the Menu button on a phone.
+
+**Or set a path.** In `src/lib/site.ts`, change `SITE_LOGO_SRC` from `""` to
+the file’s address on the site, for example `"/logo.png"`. You can instead
+set the Vercel environment variable `NEXT_PUBLIC_SITE_LOGO` to that same
+path and redeploy. That variable wins if both are set.
+
+To remove the logo, delete the `public/logo.*` file, set `SITE_LOGO_SRC`
+back to `""`, and clear `NEXT_PUBLIC_SITE_LOGO` if you used it.
 
 ## Editing site pages
 
@@ -153,7 +182,8 @@ src/
     privacy/, terms/, contact/ → same editor; contact is a placeholder email
     admin/                     → admin-only editor for those pages
   components/
-    Header.tsx                → nav bar, shows login state
+    Header.tsx                → nav bar, shows login state and an optional logo
+    PasswordInput.tsx         → password field with a show/hide button
     PostList.tsx / PostItem.tsx → post rendering
     VoteButton.tsx             → upvote button
     Comments.tsx               → comment thread + form
@@ -165,6 +195,8 @@ In `src/app/globals.css`:
 - `--header-bg: #ebb73f`
 - `--nav-text: #3f679b`
 - `--page-bg: #f6f6ef`
+- Form fields use `.field-label`, `.field-input`, and `.field-button`
+  (white fields, darker borders, and a blue focus ring)
 
 ## Run it locally (only if you ever have an unrestricted machine)
 

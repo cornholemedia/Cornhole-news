@@ -30,7 +30,7 @@ function MenuIcon({ open }: { open: boolean }) {
   );
 }
 
-export default function Header() {
+export default function Header({ logoSrc }: { logoSrc: string | null }) {
   const supabase = createClient();
   const router = useRouter();
   const pathname = usePathname();
@@ -140,13 +140,21 @@ export default function Header() {
     <header className="w-full bg-[#ebb73f]">
       <div className="mx-auto max-w-6xl px-4 py-3">
         <div className="flex items-center justify-between gap-3">
-          <Link href="/" className="text-xl font-bold text-white hover:no-underline">
-            Cornhole News
+          <Link href="/" className="flex min-w-0 items-center gap-2 text-xl font-bold text-white hover:no-underline">
+            {logoSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element -- aspect ratio is unknown until a logo file is added
+              <img
+                src={logoSrc}
+                alt=""
+                className="h-8 w-auto max-h-8 max-w-24 shrink-0 object-contain"
+              />
+            ) : null}
+            <span className="truncate">Cornhole News</span>
           </Link>
 
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded border border-[#3f679b]/40 bg-white/50 px-3 py-1.5 text-sm font-medium text-[#3f679b] lg:hidden"
+            className="inline-flex shrink-0 items-center gap-2 rounded border border-[#3f679b]/40 bg-white/50 px-3 py-1.5 text-sm font-medium text-[#3f679b] lg:hidden"
             aria-expanded={menuOpen}
             aria-controls="site-menu"
             onClick={toggleMenu}

@@ -3,6 +3,15 @@ export const CANONICAL_SITE_URL = "https://cornholenews.news";
 
 export const SITE_NAME = "Cornhole News";
 
+/**
+ * Optional logo shown beside the site title.
+ * Leave this empty to hide the logo. A file named logo.svg, logo.png,
+ * logo.webp, logo.jpg, or logo.jpeg in /public is used automatically.
+ * Or set this to a public path such as "/logo.png".
+ * NEXT_PUBLIC_SITE_LOGO overrides this value when it is set.
+ */
+export const SITE_LOGO_SRC = "";
+
 export const DEFAULT_DESCRIPTION =
   "News, discussion, and community for the game of cornhole.";
 

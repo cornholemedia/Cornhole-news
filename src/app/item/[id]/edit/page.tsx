@@ -130,33 +130,42 @@ export default function EditPostPage() {
       <h1 className="mb-4 text-2xl font-bold">Edit post</h1>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label className="mb-1 block text-sm text-[#666]">Title</label>
+          <label htmlFor="edit-title" className="field-label">
+            Title
+          </label>
           <input
+            id="edit-title"
             type="text"
             required
             maxLength={300}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px]"
+            className="field-input"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm text-[#666]">URL (optional)</label>
+          <label htmlFor="edit-url" className="field-label">
+            URL (optional)
+          </label>
           <input
+            id="edit-url"
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px]"
+            className="field-input"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm text-[#666]">Text (optional)</label>
+          <label htmlFor="edit-body" className="field-label">
+            Text (optional)
+          </label>
           <textarea
+            id="edit-body"
             rows={6}
             maxLength={5000}
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            className="w-full rounded border border-[#e0e0e0] px-3 py-2 text-[15px]"
+            className="field-input"
           />
         </div>
 
@@ -166,7 +175,7 @@ export default function EditPostPage() {
           <button
             type="submit"
             disabled={saving}
-            className="rounded bg-[#3f679b] px-4 py-2 text-[15px] font-medium text-white hover:bg-[#345580] disabled:opacity-60"
+            className="field-button rounded bg-[#3f679b] px-4 py-2 text-[15px] font-medium text-white hover:bg-[#345580] disabled:opacity-60"
           >
             {saving ? "Saving..." : "Save"}
           </button>
