@@ -1,3 +1,15 @@
+import {
+  CONTACT_BODY,
+  CONTACT_SUBTITLE,
+  CONTACT_TITLE,
+  PRIVACY_BODY,
+  PRIVACY_SUBTITLE,
+  PRIVACY_TITLE,
+  TERMS_BODY,
+  TERMS_SUBTITLE,
+  TERMS_TITLE,
+} from "./legal-copy";
+
 export const PAGE_SLUGS = [
   "about",
   "jobs",
@@ -74,15 +86,13 @@ export const DEFAULT_PAGES: Record<PageSlug, Omit<StaticPageContent, "slug">> = 
   about: {
     title: "About Cornhole News",
     subtitle: "",
-    body: `Cornhole News is a community-driven site for news, discussion, and everything related to the game of cornhole.
+    body: `Cornhole News is a news and discussion site for the 12 Midwestern states.
 
-Whether you play in your backyard, compete in local leagues, or follow the professional tours, this is a place to share links, ask questions, and talk about the game.
-
-The site is inspired by classic link aggregators and is built to stay simple, fast, and focused on the content.`,
+People share links, start conversations, and comment on what is happening in the region. The site is inspired by classic link aggregators and is built to stay simple, fast, and focused on the content.`,
   },
   jobs: {
     title: "Jobs",
-    subtitle: "Cornhole-related job openings and opportunities.",
+    subtitle: "Job openings and opportunities.",
     body: `## No jobs posted yet
 
 note: Check back later, or [contact us](/contact) if you'd like to post a position.`,
@@ -90,7 +100,7 @@ note: Check back later, or [contact us](/contact) if you'd like to post a positi
   advertise: {
     title: "Advertise on Cornhole News",
     subtitle:
-      "Reach an engaged audience of cornhole players, fans, league organizers, and gear enthusiasts.",
+      "Reach readers who follow news and discussion across the 12 Midwestern states.",
     body: `## Ad Placements
 
 - **Sidebar 300×250** — Standard medium rectangle
@@ -99,37 +109,19 @@ note: Check back later, or [contact us](/contact) if you'd like to post a positi
 Interested in advertising? [Contact us](/contact) and we'll get back to you with rates and availability.`,
   },
   privacy: {
-    title: "Privacy Policy",
-    subtitle: "PLACEHOLDER — replace this with your real privacy policy.",
-    body: `## PLACEHOLDER — not a real privacy policy
-
-This page is starter text so the site has a privacy link. It is not legal advice and it does not describe a finished privacy policy.
-
-Replace every paragraph here with your own policy before you treat this page as official. Say what you collect (for example account email, username, posts, and comments), why you collect it, and how people can reach you.
-
-note: Owner: edit this page from the admin screen and replace this placeholder.`,
+    title: PRIVACY_TITLE,
+    subtitle: PRIVACY_SUBTITLE,
+    body: PRIVACY_BODY,
   },
   terms: {
-    title: "Terms of Use",
-    subtitle: "PLACEHOLDER — replace this with your real terms of use.",
-    body: `## PLACEHOLDER — not real terms of use
-
-This page is starter text so the site has a terms link. It is not legal advice and it is not a finished terms of use.
-
-Replace every paragraph here with the rules you want for accounts, posts, comments, and advertising.
-
-note: Owner: edit this page from the admin screen and replace this placeholder.`,
+    title: TERMS_TITLE,
+    subtitle: TERMS_SUBTITLE,
+    body: TERMS_BODY,
   },
   contact: {
-    title: "Contact",
-    subtitle: "PLACEHOLDER — replace this with how people should reach Cornhole News.",
-    body: `## PLACEHOLDER — add your real contact details
-
-This page does not send messages anywhere yet. Replace the address below with the email you want people to use.
-
-Email: [replace-this@example.com](mailto:replace-this@example.com)
-
-note: Owner: edit this page and put in a real email address. No contact form is connected.`,
+    title: CONTACT_TITLE,
+    subtitle: CONTACT_SUBTITLE,
+    body: CONTACT_BODY,
   },
 };
 

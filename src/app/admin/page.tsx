@@ -1,17 +1,20 @@
 import Link from "next/link";
+import SiteSettingsForm from "@/components/SiteSettingsForm";
 import { getPagesForAdmin } from "@/lib/pages";
+import { getSiteSettingsForAdmin } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPagesIndex() {
-  const pages = await getPagesForAdmin();
+  const [pages, settings] = await Promise.all([getPagesForAdmin(), getSiteSettingsForAdmin()]);
   const loadError = pages.find((page) => page.loadError)?.loadError ?? null;
 
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-2 text-2xl font-bold">Edit pages</h1>
       <p className="mb-6 text-[15px] leading-relaxed text-[#666]">
-        Change About, Jobs, Advertise, Privacy, Terms, and Contact. Posts still go
+        Change About, Jobs, Advertise, Privacy, Terms, and Contact. The email addresses
+        below are where the contact form and job applications are sent. Posts still go
         through{" "}
         <Link href="/submit" className="text-[#3f679b] hover:underline">
           Submit
@@ -19,11 +22,21 @@ export default async function AdminPagesIndex() {
         .
       </p>
 
+      <div className="mb-8">
+        <SiteSettingsForm
+          contactEmail={settings.contactEmail}
+          jobsEmail={settings.jobsEmail}
+          stored={settings.stored}
+          loadError={settings.loadError}
+        />
+      </div>
+
       {loadError && (
         <p className="mb-4 rounded border border-[#e0e0e0] bg-white p-4 text-sm text-red-600">
           Could not read stored pages ({loadError}). If this is a new database,
-          run <code>supabase/migrations/20260923_editable_pages.sql</code> and{" "}
-          <code>supabase/migrations/20260930_legal_pages.sql</code> in the Supabase
+          run <code>supabase/migrations/20260923_editable_pages.sql</code>,{" "}
+          <code>supabase/migrations/20260930_legal_pages.sql</code>, and{" "}
+          <code>supabase/migrations/20261007_legal_pages_text.sql</code> in the Supabase
           SQL editor. The public site keeps showing the built-in copy until then.
         </p>
       )}
@@ -32,7 +45,8 @@ export default async function AdminPagesIndex() {
         <p className="mb-4 rounded border border-[#e0e0e0] bg-white p-4 text-sm text-[#666]">
           Pages marked “built-in copy” are not saved in the database yet. To add
           Privacy, Terms, and Contact, open the Supabase SQL editor and run{" "}
-          <code>supabase/migrations/20260930_legal_pages.sql</code>.
+          <code>supabase/migrations/20260930_legal_pages.sql</code>, then{" "}
+          <code>supabase/migrations/20261007_legal_pages_text.sql</code>.
         </p>
       )}
 

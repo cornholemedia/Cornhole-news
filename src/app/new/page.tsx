@@ -6,7 +6,7 @@ export const revalidate = 0;
 
 export const metadata = pageMeta({
   title: "New",
-  description: "The latest cornhole stories and links, newest first.",
+  description: "The latest stories and links, newest first.",
   path: "/new",
 });
 
