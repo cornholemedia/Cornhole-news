@@ -1,7 +1,8 @@
 # Cornhole News
 
-A Hacker News–style community site for cornhole news, discussion, and links —
-now wired up to a real Supabase backend (auth, posts, voting, comments).
+A Hacker News–style community site for news and discussion across the 12
+Midwestern states — now wired up to a real Supabase backend (auth, posts,
+voting, comments).
 
 ## Setup (no local installs needed)
 
@@ -19,6 +20,7 @@ now wired up to a real Supabase backend (auth, posts, voting, comments).
    - `supabase/migrations/20261007_forms_and_settings.sql`
    - `supabase/migrations/20261007_signup_age_confirmation.sql`
    - `supabase/migrations/20261007_legal_pages_text.sql`
+   - `supabase/migrations/20261007_midwest_page_copy.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -31,13 +33,13 @@ now wired up to a real Supabase backend (auth, posts, voting, comments).
 ### 3. Connect the repo to Vercel
 1. Go to [vercel.com](https://vercel.com) → **Add New → Project** → import your GitHub repo.
 2. Before deploying, add these **Environment Variables**.
-   Set them for Production and Preview. Do not put the service role key or
-   the Resend key in any variable whose name starts with `NEXT_PUBLIC_`.
+   Set them for Production and Preview. Do not put the Resend key in any
+   variable whose name starts with `NEXT_PUBLIC_`. The service role key is
+   not used by this site.
    - `NEXT_PUBLIC_SUPABASE_URL` = your Supabase Project URL
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = your Supabase anon public key
-   - `SUPABASE_SERVICE_ROLE_KEY` = the **service_role** secret from
-     Project Settings → API. The contact form and job applications need this
-     to save a copy and to store resumes. It stays on the server.
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = your Supabase anon public key.
+     The contact form and job applications use this key. They do not need
+     the service role secret.
    - `RESEND_API_KEY` = your Resend API key. This sends the form emails.
      If it is missing, the site still saves the form and tells the visitor
      it was received. Nothing is emailed until the key is set.
@@ -113,7 +115,7 @@ redeploys automatically.
 - **About / Jobs / Advertise / Privacy / Terms / Contact** — editable page copy stored in Supabase, with the
   built-in text as a fallback until a page is saved
 - **Contact form** — name, email, optional subject, and message. A copy is saved in Supabase and emailed to the contact inbox.
-- **Job applications** — the form on `/jobs` stores the application, puts the resume in a private bucket, and emails a 7-day download link
+- **Job applications** — the form on `/jobs` stores the application, keeps the resume in a private bucket, and attaches that file to the email
 - **Inbox addresses** — an admin can change the contact and jobs inboxes at `/admin`
 - **Signup** — requires a confirmation that the person is at least 13 and agrees to the Terms and Privacy Policy
 - **Ads** — the sidebar placeholders stay hidden unless `SHOW_ADS=true`
@@ -155,10 +157,11 @@ accounts that are not admins.
    and `supabase/migrations/20260930_revoke_function_execute.sql`.
    Skip the older file if you just ran a current `supabase/schema.sql` on a new project,
    but still run the two `20260930` files if those pages or function changes are not there yet.
-   Then run these three, in order. Each one is safe to run more than once:
+   Then run these four, in order. Each one is safe to run more than once:
    - `supabase/migrations/20261007_forms_and_settings.sql`
    - `supabase/migrations/20261007_signup_age_confirmation.sql`
    - `supabase/migrations/20261007_legal_pages_text.sql`
+   - `supabase/migrations/20261007_midwest_page_copy.sql`
 
    The last file fills in Privacy and Terms only while the saved page still
    says PLACEHOLDER. It will not overwrite a page you have already edited.
@@ -244,8 +247,6 @@ npm run dev
 
 Optional local values in `.env.local`:
 
-- `SUPABASE_SERVICE_ROLE_KEY` lets the contact and jobs forms save while you
-  are testing on your own machine. Never commit this value.
 - `RESEND_API_KEY` and `CONTACT_FROM_EMAIL` send the form emails. Without the
   Resend key, a saved form still shows a success message.
 - `SHOW_ADS=true` shows the dashed ad boxes. Leave it out to hide them.

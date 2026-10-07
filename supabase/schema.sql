@@ -299,16 +299,14 @@ values
     'about',
     'About Cornhole News',
     '',
-    $about$Cornhole News is a community-driven site for news, discussion, and everything related to the game of cornhole.
+    $about$Cornhole News is a news and discussion site for the 12 Midwestern states.
 
-Whether you play in your backyard, compete in local leagues, or follow the professional tours, this is a place to share links, ask questions, and talk about the game.
-
-The site is inspired by classic link aggregators and is built to stay simple, fast, and focused on the content.$about$
+People share links, start conversations, and comment on what is happening in the region. The site is inspired by classic link aggregators and is built to stay simple, fast, and focused on the content.$about$
   ),
   (
     'jobs',
     'Jobs',
-    'Cornhole-related job openings and opportunities.',
+    'Job openings and opportunities.',
     $jobs$## No jobs posted yet
 
 note: Check back later, or [contact us](/contact) if you'd like to post a position.$jobs$
@@ -316,7 +314,7 @@ note: Check back later, or [contact us](/contact) if you'd like to post a positi
   (
     'advertise',
     'Advertise on Cornhole News',
-    'Reach an engaged audience of cornhole players, fans, league organizers, and gear enthusiasts.',
+    'Reach readers who follow news and discussion across the 12 Midwestern states.',
     $advertise$## Ad Placements
 
 - **Sidebar 300×250** — Standard medium rectangle
@@ -330,7 +328,7 @@ Interested in advertising? [Contact us](/contact) and we'll get back to you with
     'How Cornhole Media handles information on Cornhole News.',
     $privacy$Effective date: October 7, 2026.
 
-Cornhole Media ("we", "us") operates Cornhole News at https://cornholenews.news. The site is a community place to share links, posts, and comments about cornhole. This policy says what we collect, why we collect it, who helps us run the site, and how you can reach us.
+Cornhole Media ("we", "us") operates Cornhole News at https://cornholenews.news. The site is a news and discussion community for the 12 Midwestern states, where people share links, posts, and comments. This policy says what we collect, why we collect it, who helps us run the site, and how you can reach us.
 
 ## Who we are
 
@@ -399,7 +397,7 @@ Cornhole News is not directed to children under 13. You must confirm that you ar
 
 ## Security
 
-The database uses row level security. Resume files are stored in a private bucket, and a download link in an application email works only for a limited time. No website can guarantee perfect security. Use a password you do not reuse on other sites.
+The database uses row level security. Resume files are stored in a private bucket, and a copy is attached to the application email sent to the site operator. No website can guarantee perfect security. Use a password you do not reuse on other sites.
 
 ## Changes
 
@@ -522,5 +520,6 @@ Email: [cornholemedia@gmail.com](mailto:cornholemedia@gmail.com)$contact$
 on conflict (slug) do nothing;
 
 -- Contact and job forms, inbox settings, resume storage, the signup age
--- check, and later privacy/terms edits live in supabase/migrations/20261007_*.sql.
+-- check, Midwest starter copy, and later privacy/terms edits live in
+-- supabase/migrations/20261007_*.sql.
 -- Run those after this file. They are safe to run more than once.

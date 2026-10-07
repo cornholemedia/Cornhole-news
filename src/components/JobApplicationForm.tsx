@@ -1,107 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useActionState, useState } from "react";
 import HoneypotField from "@/components/HoneypotField";
-import { prepareResumeUpload, submitJobApplication } from "@/app/jobs/actions";
+import { submitJobApplication } from "@/app/jobs/actions";
 import {
-  HONEYPOT_FIELD,
-  RESUME_BUCKET,
   RESUME_FILE_ERROR,
   RESUME_MAX_BYTES,
-  RESUME_MIME,
   US_STATES,
   resumeKindFromName,
+  type FormStatus,
 } from "@/lib/form-fields";
-import { createClient } from "@/lib/supabase/client";
+
+const initialState: FormStatus = { ok: false };
 
 export default function JobApplicationForm() {
-  const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [resumePath, setResumePath] = useState("");
+  const [state, formAction, pending] = useActionState(submitJobApplication, initialState);
+  const [fileError, setFileError] = useState<string | null>(null);
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (pending) return;
-
-    setError(null);
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    const honeypot = String(data.get(HONEYPOT_FIELD) ?? "");
-    const fileInput = form.elements.namedItem("resume");
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    setFileError(null);
+    const fileInput = event.currentTarget.elements.namedItem("resume");
     const file = fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : undefined;
-
-    if (!file && !resumePath) {
-      setError(RESUME_FILE_ERROR);
-      return;
-    }
-
-    setPending(true);
-
-    try {
-      let path = resumePath;
-      if (file && !path) {
-        const kind = resumeKindFromName(file.name);
-        if (!kind || file.size <= 0 || file.size > RESUME_MAX_BYTES) {
-          setError(RESUME_FILE_ERROR);
-          setPending(false);
-          return;
-        }
-
-        const ticket = await prepareResumeUpload({
-          fileName: file.name,
-          fileSize: file.size,
-          honeypot,
-        });
-
-        if (!ticket.ok) {
-          setError(ticket.error);
-          setPending(false);
-          return;
-        }
-
-        if (ticket.skipped) {
-          setDone(true);
-          setPending(false);
-          return;
-        }
-
-        const typedFile = new File([file], file.name, { type: RESUME_MIME[kind] });
-        const supabase = createClient();
-        const { error: uploadError } = await supabase.storage
-          .from(RESUME_BUCKET)
-          .uploadToSignedUrl(ticket.path, ticket.token, typedFile, {
-            contentType: RESUME_MIME[kind],
-          });
-
-        if (uploadError) {
-          setError("The resume could not be uploaded. Check the file and try again.");
-          setPending(false);
-          return;
-        }
-
-        path = ticket.path;
-        setResumePath(path);
-      }
-
-      data.set("resumePath", path);
-      data.delete("resume");
-      const result = await submitJobApplication(data);
-      if (!result.ok) {
-        const message = result.error ?? "Something went wrong. Please try again.";
-        if (/resume|PDF|expired/i.test(message)) setResumePath("");
-        setError(message);
-        return;
-      }
-
-      setDone(true);
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setPending(false);
+    if (!file || !resumeKindFromName(file.name) || file.size <= 0 || file.size > RESUME_MAX_BYTES) {
+      event.preventDefault();
+      setFileError(RESUME_FILE_ERROR);
     }
   }
+
+  const error = fileError ?? (!state.ok ? state.error : null);
 
   return (
     <section className="mt-8 rounded border border-[#e0e0e0] bg-white p-5">
@@ -110,7 +37,7 @@ export default function JobApplicationForm() {
         Tell us about the role you want. A resume is required.
       </p>
 
-      {done ? (
+      {state.ok && !fileError ? (
         <p
           role="status"
           className="rounded border border-[#2f6b3a] bg-white p-4 text-[15px] leading-relaxed text-[#1a1a1a]"
@@ -119,7 +46,7 @@ export default function JobApplicationForm() {
           entered if it is a fit.
         </p>
       ) : (
-        <form onSubmit={onSubmit} className="relative space-y-3">
+        <form action={formAction} onSubmit={onSubmit} className="relative space-y-3">
           <HoneypotField />
           <div>
             <label htmlFor="job-name" className="field-label">
@@ -235,14 +162,13 @@ export default function JobApplicationForm() {
               id="job-resume"
               name="resume"
               type="file"
-              required={!resumePath}
+              required
               accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               aria-describedby="job-resume-hint"
               className="field-input file:mr-3 file:border-0 file:bg-transparent file:text-[15px] file:font-medium file:text-[#3f679b]"
-              onChange={() => setResumePath("")}
             />
             <p id="job-resume-hint" className="mt-1 text-[12px] text-[#666]">
-              PDF, DOC, or DOCX. Maximum 5 MB.
+              PDF, DOC, or DOCX. Maximum 4 MB.
             </p>
           </div>
           <div>

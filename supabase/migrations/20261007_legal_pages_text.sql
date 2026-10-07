@@ -13,7 +13,7 @@ set
   subtitle = 'How Cornhole Media handles information on Cornhole News.',
   body = $privacy$Effective date: October 7, 2026.
 
-Cornhole Media ("we", "us") operates Cornhole News at https://cornholenews.news. The site is a community place to share links, posts, and comments about cornhole. This policy says what we collect, why we collect it, who helps us run the site, and how you can reach us.
+Cornhole Media ("we", "us") operates Cornhole News at https://cornholenews.news. The site is a news and discussion community for the 12 Midwestern states, where people share links, posts, and comments. This policy says what we collect, why we collect it, who helps us run the site, and how you can reach us.
 
 ## Who we are
 
@@ -82,7 +82,7 @@ Cornhole News is not directed to children under 13. You must confirm that you ar
 
 ## Security
 
-The database uses row level security. Resume files are stored in a private bucket, and a download link in an application email works only for a limited time. No website can guarantee perfect security. Use a password you do not reuse on other sites.
+The database uses row level security. Resume files are stored in a private bucket, and a copy is attached to the application email sent to the site operator. No website can guarantee perfect security. Use a password you do not reuse on other sites.
 
 ## Changes
 

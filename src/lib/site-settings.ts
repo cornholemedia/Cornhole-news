@@ -5,8 +5,8 @@ import {
   DEFAULT_RECIPIENT_EMAIL,
   JOBS_RECIPIENT_KEY,
 } from "@/lib/setting-keys";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
 
 export { CONTACT_RECIPIENT_KEY, DEFAULT_RECIPIENT_EMAIL, JOBS_RECIPIENT_KEY };
 
@@ -18,21 +18,17 @@ const DEFAULTS = {
 export type SettingKey = keyof typeof DEFAULTS;
 
 export async function recipientEmail(key: SettingKey): Promise<string> {
-  const supabase = createServiceClient();
-  if (!supabase) return DEFAULTS[key];
+  if (!isSupabaseConfigured()) return DEFAULTS[key];
 
-  const { data, error } = await supabase
-    .from("site_settings")
-    .select("value")
-    .eq("key", key)
-    .maybeSingle();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("form_recipient_email", { p_key: key });
 
   if (error) {
     console.warn(`Could not read site setting ${key}:`, error.message);
     return DEFAULTS[key];
   }
 
-  const email = typeof data?.value === "string" ? cleanEmail(data.value) : null;
+  const email = typeof data === "string" ? cleanEmail(data) : null;
   return email ?? DEFAULTS[key];
 }
 
@@ -50,6 +46,8 @@ export async function getSiteSettingsForAdmin(): Promise<AdminSiteSettings> {
     stored: false,
     loadError: null,
   };
+
+  if (!isSupabaseConfigured()) return fallback;
 
   try {
     const supabase = await createClient();

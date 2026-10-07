@@ -86,15 +86,13 @@ export const DEFAULT_PAGES: Record<PageSlug, Omit<StaticPageContent, "slug">> = 
   about: {
     title: "About Cornhole News",
     subtitle: "",
-    body: `Cornhole News is a community-driven site for news, discussion, and everything related to the game of cornhole.
+    body: `Cornhole News is a news and discussion site for the 12 Midwestern states.
 
-Whether you play in your backyard, compete in local leagues, or follow the professional tours, this is a place to share links, ask questions, and talk about the game.
-
-The site is inspired by classic link aggregators and is built to stay simple, fast, and focused on the content.`,
+People share links, start conversations, and comment on what is happening in the region. The site is inspired by classic link aggregators and is built to stay simple, fast, and focused on the content.`,
   },
   jobs: {
     title: "Jobs",
-    subtitle: "Cornhole-related job openings and opportunities.",
+    subtitle: "Job openings and opportunities.",
     body: `## No jobs posted yet
 
 note: Check back later, or [contact us](/contact) if you'd like to post a position.`,
@@ -102,7 +100,7 @@ note: Check back later, or [contact us](/contact) if you'd like to post a positi
   advertise: {
     title: "Advertise on Cornhole News",
     subtitle:
-      "Reach an engaged audience of cornhole players, fans, league organizers, and gear enthusiasts.",
+      "Reach readers who follow news and discussion across the 12 Midwestern states.",
     body: `## Ad Placements
 
 - **Sidebar 300×250** — Standard medium rectangle

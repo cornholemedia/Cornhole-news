@@ -1,3 +1,5 @@
+import { cache } from "react";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import {
   DEFAULT_PAGES,
@@ -28,7 +30,11 @@ function publishedFromRow(slug: PageSlug, row: PageRow | null): StaticPageConten
   };
 }
 
-async function fetchPageRows(): Promise<{ rows: PageRow[]; loadError: string | null }> {
+const fetchPageRows = cache(async (): Promise<{ rows: PageRow[]; loadError: string | null }> => {
+  if (!isSupabaseConfigured()) {
+    return { rows: [], loadError: null };
+  }
+
   try {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -47,7 +53,7 @@ async function fetchPageRows(): Promise<{ rows: PageRow[]; loadError: string | n
     console.error("Error fetching pages:", message);
     return { rows: [], loadError: message };
   }
-}
+});
 
 export async function getPublishedPage(slug: PageSlug): Promise<StaticPageContent> {
   const { rows, loadError } = await fetchPageRows();

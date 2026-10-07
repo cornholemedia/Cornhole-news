@@ -1,11 +1,13 @@
 export const RESUME_BUCKET = "resumes";
-export const RESUME_MAX_BYTES = 5 * 1024 * 1024;
-export const RESUME_LINK_SECONDS = 60 * 60 * 24 * 7;
+// The private bucket allows 5 MB. The form stops at 4 MB so the same bytes
+// can be attached to the email. Vercel rejects function bodies over 4.5 MB.
+export const RESUME_BUCKET_MAX_BYTES = 5 * 1024 * 1024;
+export const RESUME_MAX_BYTES = 4 * 1024 * 1024;
 export const HONEYPOT_FIELD = "hp_confirm";
 
+// Hourly caps enforced inside public.record_form_attempt. Keep the numbers in sync.
 export const CONTACT_LIMIT_PER_HOUR = 5;
 export const JOB_SUBMIT_LIMIT_PER_HOUR = 3;
-export const JOB_UPLOAD_LIMIT_PER_HOUR = 5;
 
 export const FORM_SAVE_ERROR =
   "We could not save that right now. Please try again in a few minutes, or email cornholemedia@gmail.com.";
@@ -13,7 +15,7 @@ export const FORM_SAVE_ERROR =
 export const FORM_RATE_LIMIT_ERROR =
   "You have sent several of these recently. Please wait about an hour and try again.";
 
-export const RESUME_FILE_ERROR = "Upload a PDF, DOC, or DOCX file that is 5 MB or smaller.";
+export const RESUME_FILE_ERROR = "Upload a PDF, DOC, or DOCX file that is 4 MB or smaller.";
 
 export type FormStatus = {
   ok: boolean;
@@ -103,7 +105,6 @@ export type JobInput = {
   coverLetter: string;
   heardAbout: string;
   consent: boolean;
-  resumePath: string;
 };
 
 export function fieldValue(value: FormDataEntryValue | null): string {
@@ -207,7 +208,6 @@ export function parseJobFields(input: {
   coverLetter: string;
   heardAbout: string;
   consent: boolean;
-  resumePath: string;
 }): { ok: true; value: JobInput } | { ok: false; error: string } {
   const fullName = cleanLine(input.fullName, 200);
   if (!fullName) return { ok: false, error: "Enter your full name." };
@@ -249,10 +249,6 @@ export function parseJobFields(input: {
     };
   }
 
-  if (!isResumeStoragePath(input.resumePath)) {
-    return { ok: false, error: "Upload your resume before submitting." };
-  }
-
   return {
     ok: true,
     value: {
@@ -266,7 +262,6 @@ export function parseJobFields(input: {
       coverLetter,
       heardAbout,
       consent: true,
-      resumePath: input.resumePath,
     },
   };
 }

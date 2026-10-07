@@ -2,7 +2,7 @@ import { pageMeta } from "@/lib/seo";
 
 export const metadata = pageMeta({
   title: "Submit",
-  description: "Submit a cornhole link or start a discussion on Cornhole News.",
+  description: "Submit a link or start a discussion on Cornhole News.",
   path: "/submit",
 });
 

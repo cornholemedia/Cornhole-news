@@ -2,11 +2,16 @@
 -- Paste into Supabase Dashboard -> SQL Editor -> New query -> Run.
 -- Safe to run more than once.
 --
--- The website saves these rows with the service role key (SUPABASE_SERVICE_ROLE_KEY
--- on Vercel). Visitors cannot read or write them through the public API.
--- Signed-in admins can read submissions and can change the two inbox addresses.
--- Resume files go in the private Storage bucket "resumes". There is no public
--- download policy. The server creates a time-limited link after an upload.
+-- The website uses the anon key only. It does not need the service role key.
+-- Visitors can insert a contact message or a job application. They cannot read
+-- those rows. Signed-in admins can read them, using public.is_admin().
+-- The two inbox addresses are read through form_recipient_email(), which
+-- returns only those addresses. Rate limits go through record_form_attempt(),
+-- which records a hashed IP and returns true or false. Neither function
+-- returns other people's rows.
+-- Resume files go in the private Storage bucket "resumes". Visitors can add a
+-- file. Only admins can read one. The bucket allows PDF, DOC, and DOCX up to
+-- 5 MB. The form itself stops at 4 MB so the file can be attached to the email.
 
 -- 1. Inboxes the admin can change. Seeded once; re-running does not reset them.
 create table if not exists public.site_settings (
@@ -53,7 +58,7 @@ end;
 $$;
 
 revoke all on function public.touch_site_setting() from public, anon;
-grant execute on function public.touch_site_setting() to authenticated, service_role;
+grant execute on function public.touch_site_setting() to authenticated;
 
 drop trigger if exists site_settings_touch on public.site_settings;
 create trigger site_settings_touch
@@ -62,7 +67,6 @@ create trigger site_settings_touch
 
 revoke all on table public.site_settings from public, anon, authenticated;
 grant select, update on table public.site_settings to authenticated;
-grant select, update on table public.site_settings to service_role;
 
 insert into public.site_settings (key, value)
 values
@@ -72,6 +76,27 @@ on conflict (key) do nothing;
 
 comment on table public.site_settings is
   'Email inboxes for the contact form and job applications. Change them from the admin page.';
+
+-- Returns one inbox address and nothing else. Granted to anon so the site can
+-- send mail with the anon key. Callers cannot read any other setting.
+create or replace function public.form_recipient_email(p_key text)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select value
+  from public.site_settings
+  where p_key in ('contact_recipient_email', 'jobs_recipient_email')
+    and key = p_key;
+$$;
+
+revoke all on function public.form_recipient_email(text) from public;
+grant execute on function public.form_recipient_email(text) to anon, authenticated;
+
+comment on function public.form_recipient_email(text) is
+  'Returns the contact or jobs inbox address. Does not return any other setting.';
 
 -- 2. Saved copies of the forms, in case email fails.
 create table if not exists public.contact_submissions (
@@ -122,19 +147,8 @@ create table if not exists public.form_attempts (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.resume_uploads (
-  id uuid primary key default extensions.gen_random_uuid(),
-  storage_path text not null unique check (char_length(storage_path) between 1 and 300),
-  ip_hash text check (ip_hash is null or ip_hash ~ '^[0-9a-f]{64}$'),
-  created_at timestamptz not null default now(),
-  consumed_at timestamptz
-);
-
 create index if not exists form_attempts_lookup_idx
   on public.form_attempts (form, ip_hash, created_at desc);
-
-create index if not exists resume_uploads_ip_created_idx
-  on public.resume_uploads (ip_hash, created_at desc);
 
 create index if not exists contact_submissions_created_idx
   on public.contact_submissions (created_at desc);
@@ -145,7 +159,6 @@ create index if not exists job_applications_created_idx
 alter table public.contact_submissions enable row level security;
 alter table public.job_applications enable row level security;
 alter table public.form_attempts enable row level security;
-alter table public.resume_uploads enable row level security;
 
 drop policy if exists "Admins can read contact submissions" on public.contact_submissions;
 create policy "Admins can read contact submissions"
@@ -153,29 +166,98 @@ create policy "Admins can read contact submissions"
   to authenticated
   using (public.is_admin());
 
+drop policy if exists "Anyone can submit a contact message" on public.contact_submissions;
+create policy "Anyone can submit a contact message"
+  on public.contact_submissions for insert
+  to anon, authenticated
+  with check (true);
+
 drop policy if exists "Admins can read job applications" on public.job_applications;
 create policy "Admins can read job applications"
   on public.job_applications for select
   to authenticated
   using (public.is_admin());
 
+drop policy if exists "Anyone can submit a job application" on public.job_applications;
+create policy "Anyone can submit a job application"
+  on public.job_applications for insert
+  to anon, authenticated
+  with check (consent is true);
+
 revoke all on table public.contact_submissions from public, anon, authenticated;
 revoke all on table public.job_applications from public, anon, authenticated;
 revoke all on table public.form_attempts from public, anon, authenticated;
-revoke all on table public.resume_uploads from public, anon, authenticated;
 
+grant insert on table public.contact_submissions to anon, authenticated;
 grant select on table public.contact_submissions to authenticated;
+grant insert on table public.job_applications to anon, authenticated;
 grant select on table public.job_applications to authenticated;
-grant all on table public.contact_submissions to service_role;
-grant all on table public.job_applications to service_role;
-grant all on table public.form_attempts to service_role;
-grant all on table public.resume_uploads to service_role;
-grant usage, select on sequence public.form_attempts_id_seq to service_role;
 
 comment on table public.contact_submissions is
-  'Backup copy of contact-form messages. Written by the server. Admins can read.';
+  'Backup copy of contact-form messages. Visitors can insert. Only admins can read.';
 comment on table public.job_applications is
-  'Backup copy of job applications, including the private resume path. Admins can read.';
+  'Backup copy of job applications, including the private resume path. Visitors can insert. Only admins can read.';
+
+-- Records one attempt and returns true when the caller is still under the
+-- hourly limit (5 contact, 3 job). Returns false when they are over the limit
+-- or the arguments are not usable. Does not return attempt rows.
+-- A site-wide cap stops someone from filling the table with random hashes.
+create or replace function public.record_form_attempt(p_form text, p_ip_hash text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  hourly_limit integer;
+  recent_count integer;
+  burst_count integer;
+begin
+  if p_form = 'contact' then
+    hourly_limit := 5;
+  elsif p_form = 'job' then
+    hourly_limit := 3;
+  else
+    return false;
+  end if;
+
+  if p_ip_hash is null or p_ip_hash !~ '^[0-9a-f]{64}$' then
+    return false;
+  end if;
+
+  delete from public.form_attempts
+  where created_at < now() - interval '2 days';
+
+  select count(*) into burst_count
+  from public.form_attempts
+  where created_at > now() - interval '1 minute';
+
+  if burst_count >= 60 then
+    return false;
+  end if;
+
+  select count(*) into recent_count
+  from public.form_attempts
+  where form = p_form
+    and ip_hash = p_ip_hash
+    and created_at > now() - interval '1 hour';
+
+  if recent_count >= hourly_limit then
+    return false;
+  end if;
+
+  insert into public.form_attempts (form, ip_hash)
+  values (p_form, p_ip_hash);
+
+  return true;
+end;
+$$;
+
+revoke all on function public.record_form_attempt(text, text) from public;
+grant execute on function public.record_form_attempt(text, text) to anon, authenticated;
+
+comment on function public.record_form_attempt(text, text) is
+  'Counts a contact or job attempt for a hashed IP. Returns whether it is still allowed. Does not return stored rows.';
 
 -- 3. Private bucket for resumes. 5 MB. PDF, DOC, and DOCX only.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -196,3 +278,21 @@ set
   public = false,
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "Anyone can upload a resume" on storage.objects;
+create policy "Anyone can upload a resume"
+  on storage.objects for insert
+  to anon, authenticated
+  with check (
+    bucket_id = 'resumes'
+    and name ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[A-Za-z0-9][A-Za-z0-9._-]{0,89}$'
+  );
+
+drop policy if exists "Admins can read resumes" on storage.objects;
+create policy "Admins can read resumes"
+  on storage.objects for select
+  to authenticated
+  using (bucket_id = 'resumes' and public.is_admin());
+
+-- An earlier draft of this file kept upload tickets. The site no longer uses them.
+drop table if exists public.resume_uploads;

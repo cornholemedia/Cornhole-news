@@ -13,7 +13,7 @@ export const SITE_NAME = "Cornhole News";
 export const SITE_LOGO_SRC = "";
 
 export const DEFAULT_DESCRIPTION =
-  "News, discussion, and community for the game of cornhole.";
+  "News and discussion for the 12 Midwestern states.";
 
 /**
  * Public site origin used in metadata, the sitemap, and the title-fetcher
