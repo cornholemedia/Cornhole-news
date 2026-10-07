@@ -3,10 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import PasswordInput from "@/components/PasswordInput";
-import { createClient } from "@/lib/supabase/client";
+import { signUpAccount } from "@/app/signup/actions";
 
 export default function SignupPage() {
-  const supabase = createClient();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,20 +13,16 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { username } },
-    });
+    const result = await signUpAccount(new FormData(e.currentTarget));
 
     setLoading(false);
-    if (error) {
-      setError(error.message);
+    if (!result.ok) {
+      setError(result.error);
       return;
     }
 
@@ -59,6 +54,7 @@ export default function SignupPage() {
           </label>
           <input
             id="signup-username"
+            name="username"
             type="text"
             required
             minLength={3}
@@ -77,6 +73,7 @@ export default function SignupPage() {
           </label>
           <input
             id="signup-email"
+            name="email"
             type="email"
             required
             autoComplete="email"
@@ -91,6 +88,7 @@ export default function SignupPage() {
           </label>
           <PasswordInput
             id="signup-password"
+            name="password"
             required
             minLength={6}
             autoComplete="new-password"
@@ -98,6 +96,25 @@ export default function SignupPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
+
+        <label className="flex items-start gap-2 text-sm leading-relaxed text-[#1a1a1a]">
+          <input
+            name="ageConfirmed"
+            type="checkbox"
+            required
+            className="mt-1 h-4 w-4 accent-[#3f679b]"
+          />
+          <span>
+            I am at least 13 years old and agree to the{" "}
+            <Link href="/terms" className="text-[#3f679b] underline">
+              Terms of Use
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-[#3f679b] underline">
+              Privacy Policy
+            </Link>
+          </span>
+        </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

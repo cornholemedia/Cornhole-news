@@ -16,6 +16,9 @@ now wired up to a real Supabase backend (auth, posts, voting, comments).
    - `supabase/migrations/20260923_editable_pages.sql`
    - `supabase/migrations/20260930_legal_pages.sql`
    - `supabase/migrations/20260930_revoke_function_execute.sql`
+   - `supabase/migrations/20261007_forms_and_settings.sql`
+   - `supabase/migrations/20261007_signup_age_confirmation.sql`
+   - `supabase/migrations/20261007_legal_pages_text.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -27,9 +30,21 @@ now wired up to a real Supabase backend (auth, posts, voting, comments).
 
 ### 3. Connect the repo to Vercel
 1. Go to [vercel.com](https://vercel.com) → **Add New → Project** → import your GitHub repo.
-2. Before deploying, add these **Environment Variables**:
+2. Before deploying, add these **Environment Variables**.
+   Set them for Production and Preview. Do not put the service role key or
+   the Resend key in any variable whose name starts with `NEXT_PUBLIC_`.
    - `NEXT_PUBLIC_SUPABASE_URL` = your Supabase Project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = your Supabase anon public key
+   - `SUPABASE_SERVICE_ROLE_KEY` = the **service_role** secret from
+     Project Settings → API. The contact form and job applications need this
+     to save a copy and to store resumes. It stays on the server.
+   - `RESEND_API_KEY` = your Resend API key. This sends the form emails.
+     If it is missing, the site still saves the form and tells the visitor
+     it was received. Nothing is emailed until the key is set.
+   - `CONTACT_FROM_EMAIL` = the From address. Leave it unset until the
+     domain is verified at Resend. Unset, the site uses
+     `Cornhole News <onboarding@resend.dev>`. After verification, set it to
+     `Cornhole News <noreply@cornholenews.news>` and redeploy.
    - `SHOW_ADS` = `true` only when you want the dashed ad boxes to show.
      Leave it unset until real ads exist. Change it in Vercel, then redeploy.
    - `NEXT_PUBLIC_SITE_URL` is optional. The site already uses
@@ -97,6 +112,10 @@ redeploys automatically.
 - **Top / New** — real ranked lists pulled from the database, not mock data
 - **About / Jobs / Advertise / Privacy / Terms / Contact** — editable page copy stored in Supabase, with the
   built-in text as a fallback until a page is saved
+- **Contact form** — name, email, optional subject, and message. A copy is saved in Supabase and emailed to the contact inbox.
+- **Job applications** — the form on `/jobs` stores the application, puts the resume in a private bucket, and emails a 7-day download link
+- **Inbox addresses** — an admin can change the contact and jobs inboxes at `/admin`
+- **Signup** — requires a confirmation that the person is at least 13 and agrees to the Terms and Privacy Policy
 - **Ads** — the sidebar placeholders stay hidden unless `SHOW_ADS=true`
 
 ## Adding a logo
@@ -136,6 +155,13 @@ accounts that are not admins.
    and `supabase/migrations/20260930_revoke_function_execute.sql`.
    Skip the older file if you just ran a current `supabase/schema.sql` on a new project,
    but still run the two `20260930` files if those pages or function changes are not there yet.
+   Then run these three, in order. Each one is safe to run more than once:
+   - `supabase/migrations/20261007_forms_and_settings.sql`
+   - `supabase/migrations/20261007_signup_age_confirmation.sql`
+   - `supabase/migrations/20261007_legal_pages_text.sql`
+
+   The last file fills in Privacy and Terms only while the saved page still
+   says PLACEHOLDER. It will not overwrite a page you have already edited.
 2. Mark the account that should edit pages. In the SQL editor:
 
 ```sql
@@ -147,9 +173,18 @@ cannot change `is_admin`; use the SQL editor (this also re-applies it for
 `Cornhole_Admin` if that profile exists).
 3. Log in as that user. The header shows an **admin** link. Open `/admin`, edit a
    page, and save. The public page shows the saved title, subtitle, and body.
-   A blank body keeps the built-in copy. Privacy, Terms, and Contact start as
-   clearly marked placeholders — replace that text before treating them as final.
-   Contact shows an email address you can edit. It does not send mail by itself.
+   A blank body keeps the built-in copy. Privacy and Terms ship as full drafts.
+   Have a lawyer review them, and replace the square-bracket items (`[STATE]`,
+   `[MAILING ADDRESS]`, and `[DESIGNATED AGENT NAME]`) before you rely on them.
+   The contact and jobs pages show that saved text above the forms.
+4. On the same admin screen, set the two inbox addresses. Contact-form messages
+   go to the first. Job applications go to the second. Both start as
+   `cornholemedia@gmail.com`. Saving here does not require a new deploy.
+
+New accounts have to check that they are at least 13 and that they agree to
+the Terms and the Privacy Policy. The site does not ask for a birthdate. If
+you create a user from the Supabase dashboard instead of the signup page, set
+User Metadata to `{"age_confirmed": true, "username": "their_name"}`.
 
 Body formatting: a blank line starts a paragraph, `## Heading`, `- item`,
 `**bold**`, `[label](/path)` or `[label](https://example.com)`, and
@@ -179,8 +214,9 @@ src/
     auth/callback/             → exchanges the Supabase reset link for a session
     submit/                    → post a new story
     about/, jobs/, advertise/  → pages, content from the pages table
-    privacy/, terms/, contact/ → same editor; contact is a placeholder email
-    admin/                     → admin-only editor for those pages
+    privacy/, terms/, contact/ → same editor; contact also has a message form
+    jobs/                      → editable page, plus a job application form
+    admin/                     → admin-only editor for those pages and the form inboxes
   components/
     Header.tsx                → nav bar, shows login state and an optional logo
     PasswordInput.tsx         → password field with a show/hide button
@@ -208,6 +244,10 @@ npm run dev
 
 Optional local values in `.env.local`:
 
+- `SUPABASE_SERVICE_ROLE_KEY` lets the contact and jobs forms save while you
+  are testing on your own machine. Never commit this value.
+- `RESEND_API_KEY` and `CONTACT_FROM_EMAIL` send the form emails. Without the
+  Resend key, a saved form still shows a success message.
 - `SHOW_ADS=true` shows the dashed ad boxes. Leave it out to hide them.
 - `NEXT_PUBLIC_SITE_URL=http://localhost:3000` only if you want local links in
   previews. Production should keep `https://cornholenews.news`.
