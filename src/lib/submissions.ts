@@ -15,6 +15,7 @@ import {
   isResumeStoragePath,
   parseContactFields,
   parseJobFields,
+  parseNewsletterFields,
   resumeKindFromName,
   resumeMatchesMagic,
   safeResumeFileName,
@@ -51,7 +52,7 @@ async function formClient(): Promise<FormClient | null> {
 
 async function withinRateLimit(
   supabase: FormClient,
-  form: "contact" | "job",
+  form: "contact" | "job" | "newsletter",
   ipHash: string | null
 ): Promise<boolean | null> {
   if (!ipHash) return true;
@@ -251,4 +252,92 @@ export async function submitJobForm(formData: FormData): Promise<FormStatus> {
   }
 
   return { ok: true };
+}
+
+const NEWSLETTER_SUCCESS = "Thanks. You're subscribed. We'll send Midwest news to that inbox.";
+const NEWSLETTER_DUPLICATE =
+  "You're already subscribed. We'll keep sending Midwest news to that inbox.";
+
+function isDuplicateSignup(error: { code?: string; message?: string }): boolean {
+  return error.code === "23505" || /newsletter_subscribers_email_lower_idx/i.test(error.message ?? "");
+}
+
+async function sendNewsletterEmails(email: string, source: string): Promise<void> {
+  if (!process.env.RESEND_API_KEY?.trim()) return;
+
+  const inbox = await recipientEmail(CONTACT_RECIPIENT_KEY);
+  const page = source || "/";
+
+  await sendSiteEmail({
+    to: email,
+    replyTo: inbox,
+    subject: "You're subscribed to Cornhole News",
+    text: [
+      "Thanks for subscribing to Cornhole News.",
+      "",
+      "We'll send Midwest news to this email address. Cornhole News is a community news and discussion site for the 12 Midwestern states.",
+      "",
+      "If you did not ask for this, you can ignore the message.",
+      "",
+      "https://cornholenews.news",
+    ].join("\n"),
+  });
+
+  await sendSiteEmail({
+    to: inbox,
+    replyTo: email,
+    subject: emailSubject("Newsletter signup: ", email),
+    text: [
+      "New newsletter signup from the Cornhole News footer.",
+      "",
+      `Email: ${email}`,
+      `Page: ${page}`,
+    ].join("\n"),
+  });
+}
+
+export async function submitNewsletterForm(formData: FormData): Promise<FormStatus> {
+  const parsed = parseNewsletterFields({
+    email: fieldValue(formData.get("email")),
+    source: fieldValue(formData.get("source")),
+  });
+  if (!parsed.ok) return parsed;
+
+  if (isHoneypotTripped(formData.get(HONEYPOT_FIELD))) {
+    return { ok: true, message: NEWSLETTER_SUCCESS };
+  }
+
+  const supabase = await formClient();
+  if (!supabase) return { ok: false, error: FORM_SAVE_ERROR };
+
+  const ipHash = await requestIpHash();
+  const allowed = await withinRateLimit(supabase, "newsletter", ipHash);
+  if (allowed === null) return { ok: false, error: FORM_SAVE_ERROR };
+  if (!allowed) return { ok: false, error: FORM_RATE_LIMIT_ERROR };
+
+  const { value } = parsed;
+  const { error } = await supabase.from("newsletter_subscribers").insert({
+    email: value.email,
+    source: value.source,
+    ip_hash: ipHash,
+  });
+
+  if (error) {
+    if (isDuplicateSignup(error)) {
+      return { ok: true, message: NEWSLETTER_DUPLICATE };
+    }
+    console.error("Could not save newsletter signup:", error.message);
+    return { ok: false, error: FORM_SAVE_ERROR };
+  }
+
+  try {
+    await sendNewsletterEmails(value.email, value.source);
+  } catch (emailError) {
+    console.warn(
+      "Newsletter signup was saved, but the email failed:",
+      emailError instanceof Error ? emailError.message : "unknown error"
+    );
+  }
+
+  return { ok: true, message: NEWSLETTER_SUCCESS };
 }

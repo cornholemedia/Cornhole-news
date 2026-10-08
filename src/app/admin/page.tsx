@@ -1,12 +1,18 @@
 import Link from "next/link";
+import NewsletterAdmin from "@/components/NewsletterAdmin";
 import SiteSettingsForm from "@/components/SiteSettingsForm";
+import { getNewsletterSubscribersForAdmin } from "@/lib/newsletter";
 import { getPagesForAdmin } from "@/lib/pages";
 import { getSiteSettingsForAdmin } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPagesIndex() {
-  const [pages, settings] = await Promise.all([getPagesForAdmin(), getSiteSettingsForAdmin()]);
+  const [pages, settings, newsletter] = await Promise.all([
+    getPagesForAdmin(),
+    getSiteSettingsForAdmin(),
+    getNewsletterSubscribersForAdmin(),
+  ]);
   const loadError = pages.find((page) => page.loadError)?.loadError ?? null;
 
   return (
@@ -14,7 +20,8 @@ export default async function AdminPagesIndex() {
       <h1 className="mb-2 text-2xl font-bold">Edit pages</h1>
       <p className="mb-6 text-[15px] leading-relaxed text-[#666]">
         Change About, Jobs, Advertise, Privacy, Terms, and Contact. The email addresses
-        below are where the contact form and job applications are sent. Posts still go
+        below are where the contact form and job applications are sent. Newsletter
+        signups from the footer are listed here too. Posts still go
         through{" "}
         <Link href="/submit" className="text-[#3f679b] hover:underline">
           Submit
@@ -29,6 +36,10 @@ export default async function AdminPagesIndex() {
           stored={settings.stored}
           loadError={settings.loadError}
         />
+      </div>
+
+      <div className="mb-8">
+        <NewsletterAdmin list={newsletter} />
       </div>
 
       {loadError && (
