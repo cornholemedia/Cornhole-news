@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import Header from "@/components/Header";
 import AdSidebar from "@/components/AdSidebar";
+import NewsletterSignup from "@/components/NewsletterSignup";
 import { DEFAULT_DESCRIPTION, SITE_NAME, getSiteUrl } from "@/lib/site";
 import { getSiteLogoSrc } from "@/lib/site-logo";
 
@@ -57,8 +58,9 @@ export default function RootLayout({
           <AdSidebar />
         </div>
 
-        <footer className="border-t border-[#e0e0e0] py-4 text-center text-sm text-[#666]">
-          <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4">
+        <footer className="border-t border-[#e0e0e0] py-6 text-center text-sm text-[#666]">
+          <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-4 px-4">
+            <NewsletterSignup />
             <p>Cornhole News · Built for the community</p>
             <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
               <Link href="/contact" className="hover:underline">

@@ -21,6 +21,7 @@ voting, comments).
    - `supabase/migrations/20261007_signup_age_confirmation.sql`
    - `supabase/migrations/20261007_legal_pages_text.sql`
    - `supabase/migrations/20261007_midwest_page_copy.sql`
+   - `supabase/migrations/20261008_newsletter_subscribers.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -40,9 +41,10 @@ voting, comments).
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = your Supabase anon public key.
      The contact form and job applications use this key. They do not need
      the service role secret.
-   - `RESEND_API_KEY` = your Resend API key. This sends the form emails.
-     If it is missing, the site still saves the form and tells the visitor
-     it was received. Nothing is emailed until the key is set.
+   - `RESEND_API_KEY` = your Resend API key. This sends the form emails
+     and the newsletter confirmation. If it is missing, the site still saves
+     the form or signup and tells the visitor it was received. Nothing is
+     emailed until the key is set.
    - `CONTACT_FROM_EMAIL` = the From address. Leave it unset until the
      domain is verified at Resend. Unset, the site uses
      `Cornhole News <onboarding@resend.dev>`. After verification, set it to
@@ -117,6 +119,7 @@ redeploys automatically.
 - **Contact form** — name, email, optional subject, and message. A copy is saved in Supabase and emailed to the contact inbox.
 - **Job applications** — the form on `/jobs` stores the application, keeps the resume in a private bucket, and attaches that file to the email
 - **Inbox addresses** — an admin can change the contact and jobs inboxes at `/admin`
+- **Newsletter** — the footer has an email signup. Addresses are saved in Supabase. Admins can view them and export a CSV at `/admin`. A confirmation email is sent only when `RESEND_API_KEY` is set.
 - **Signup** — requires a confirmation that the person is at least 13 and agrees to the Terms and Privacy Policy
 - **Ads** — the sidebar placeholders stay hidden unless `SHOW_ADS=true`
 
@@ -157,14 +160,16 @@ accounts that are not admins.
    and `supabase/migrations/20260930_revoke_function_execute.sql`.
    Skip the older file if you just ran a current `supabase/schema.sql` on a new project,
    but still run the two `20260930` files if those pages or function changes are not there yet.
-   Then run these four, in order. Each one is safe to run more than once:
+   Then run these, in order. Each one is safe to run more than once:
    - `supabase/migrations/20261007_forms_and_settings.sql`
    - `supabase/migrations/20261007_signup_age_confirmation.sql`
    - `supabase/migrations/20261007_legal_pages_text.sql`
    - `supabase/migrations/20261007_midwest_page_copy.sql`
+   - `supabase/migrations/20261008_newsletter_subscribers.sql`
 
-   The last file fills in Privacy and Terms only while the saved page still
+   `20261007_midwest_page_copy.sql` fills in Privacy and Terms only while the saved page still
    says PLACEHOLDER. It will not overwrite a page you have already edited.
+   `20261008_newsletter_subscribers.sql` adds the footer signup table. Run it after the forms file.
 2. Mark the account that should edit pages. In the SQL editor:
 
 ```sql
@@ -219,7 +224,7 @@ src/
     about/, jobs/, advertise/  → pages, content from the pages table
     privacy/, terms/, contact/ → same editor; contact also has a message form
     jobs/                      → editable page, plus a job application form
-    admin/                     → admin-only editor for those pages and the form inboxes
+    admin/                     → admin-only editor for those pages, form inboxes, and newsletter subscribers
   components/
     Header.tsx                → nav bar, shows login state and an optional logo
     PasswordInput.tsx         → password field with a show/hide button

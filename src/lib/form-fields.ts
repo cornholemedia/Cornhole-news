@@ -8,6 +8,7 @@ export const HONEYPOT_FIELD = "hp_confirm";
 // Hourly caps enforced inside public.record_form_attempt. Keep the numbers in sync.
 export const CONTACT_LIMIT_PER_HOUR = 5;
 export const JOB_SUBMIT_LIMIT_PER_HOUR = 3;
+export const NEWSLETTER_LIMIT_PER_HOUR = 5;
 
 export const FORM_SAVE_ERROR =
   "We could not save that right now. Please try again in a few minutes, or email cornholemedia@gmail.com.";
@@ -20,6 +21,7 @@ export const RESUME_FILE_ERROR = "Upload a PDF, DOC, or DOCX file that is 4 MB o
 export type FormStatus = {
   ok: boolean;
   error?: string;
+  message?: string;
 };
 
 export const US_STATES = [
@@ -123,6 +125,20 @@ export function cleanEmail(value: string): string | null {
   return email;
 }
 
+export function cleanNewsletterEmail(value: string): string | null {
+  const email = cleanEmail(value);
+  return email ? email.toLowerCase() : null;
+}
+
+export function cleanSourcePath(value: string): string {
+  const text = value.trim();
+  if (!text.startsWith("/") || text.startsWith("//") || text.includes("\\") || text.includes("..")) {
+    return "";
+  }
+  if (text.length > 200 || CONTROL_CHARS.test(text) || /[\r\n]/.test(text)) return "";
+  return text;
+}
+
 function cleanBounded(value: string, max: number, min: number): string | null {
   const text = value.replace(/\r\n/g, "\n").trim();
   if (text.length < min || text.length > max) return null;
@@ -195,6 +211,16 @@ export function parseContactFields(input: {
   }
 
   return { ok: true, value: { name, email, subject, message } };
+}
+
+export function parseNewsletterFields(input: {
+  email: string;
+  source: string;
+}): { ok: true; value: { email: string; source: string } } | { ok: false; error: string } {
+  const email = cleanNewsletterEmail(input.email);
+  if (!email) return { ok: false, error: "Enter a valid email address." };
+
+  return { ok: true, value: { email, source: cleanSourcePath(input.source) } };
 }
 
 export function parseJobFields(input: {
