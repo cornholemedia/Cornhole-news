@@ -307,9 +307,9 @@ People share links, start conversations, and comment on what is happening in the
     'jobs',
     'Jobs',
     'Job openings and opportunities.',
-    $jobs$## No jobs posted yet
+    $jobs$Employers can post jobs located in the 12 Midwestern states. Posting is free, and each job is reviewed before it appears here.
 
-note: Check back later, or [contact us](/contact) if you'd like to post a position.$jobs$
+note: An approved job stays on this page for 30 days.$jobs$
   ),
   (
     'advertise',
@@ -326,7 +326,7 @@ Interested in advertising? [Contact us](/contact) and we'll get back to you with
     'privacy',
     'Privacy Policy',
     'How Cornhole Media handles information on Cornhole News.',
-    $privacy$Effective date: October 7, 2026.
+    $privacy$Effective date: October 8, 2026.
 
 Cornhole Media ("we", "us") operates Cornhole News at https://cornholenews.news. The site is a news and discussion community for the 12 Midwestern states, where people share links, posts, and comments. This policy says what we collect, why we collect it, who helps us run the site, and how you can reach us.
 
@@ -342,7 +342,7 @@ We collect what the site needs in order to work:
 - **Age confirmation.** Signup asks you to confirm that you are at least 13 and that you agree to the Terms of Use and this Privacy Policy. We do not collect birthdates.
 - **Posts and comments.** We store the links, text, and comments you submit, and the votes you cast, with the account that posted them.
 - **Contact form.** Name, email address, subject if you include one, and your message. We also store a one-way hash of the IP address, not the address itself, so we can limit repeated submissions.
-- **Job applications.** Full name, email, phone, city, state, the position you are applying for, an optional portfolio, LinkedIn, or other website, a cover letter or message, an optional note about how you heard about us, your consent, and your resume file. We store the same kind of IP hash as on the contact form.
+- **Job postings.** When an employer posts a job, we collect the job title, company name, an optional company website, the city and Midwest state, whether the work is on-site, hybrid, or remote, the employment type, optional pay details, the job description, and how to apply (a web link, an email address, or both). We also collect the poster's name and email so we can review the posting and contact them. The poster's name and email are not shown on the public job page. We store the same kind of IP hash as on the contact form.
 - **Server logs.** Our host keeps basic technical logs, such as the browser type, the time, and the page requested, to keep the site secure and running.
 - **Analytics.** We use Vercel Web Analytics. It is cookieless. It does not record your session and it does not replay what you do on the page. It gives us aggregate counts, such as how many people opened a page.
 
@@ -353,7 +353,7 @@ We do not run a newsletter, and the site has no paid plans, so we do not collect
 - To create your account and keep you signed in
 - To publish the posts, comments, and votes you choose to share
 - To read and reply to contact messages
-- To review job applications and contact applicants
+- To review job postings and contact the person who submitted one
 - To limit spam, abuse, and repeated form submissions
 - To keep the site secure and to see, in aggregate, which pages are used
 - To respond to a legal request, such as a copyright notice
@@ -362,9 +362,9 @@ We do not run a newsletter, and the site has no paid plans, so we do not collect
 
 We do not sell personal information. These companies process it for us so the site can run:
 
-- **Supabase** stores the database, runs account login, and stores resume files in a private storage bucket.
+- **Supabase** stores the database and runs account login. Resume files from older job applications, if any were uploaded, stay in a private storage bucket.
 - **Vercel** hosts the website and provides the cookieless analytics described above.
-- **Resend** delivers contact messages and job applications to the inbox set by the site operator.
+- **Resend** delivers contact messages and new job-posting notices to the inbox set by the site operator.
 
 We may also disclose information if the law requires it, or to protect the site and its users from abuse.
 
@@ -375,7 +375,7 @@ We use cookies only to keep you signed in. Those are authentication session cook
 ## How long we keep it
 
 - Account records, posts, and comments stay until you delete them or you ask us to delete your account.
-- Contact messages and job applications, including resume files, are kept long enough to reply and to consider an application, and then for up to 24 months, unless a legal claim means we need a copy longer.
+- Contact messages are kept long enough to reply, and then for up to 24 months, unless a legal claim means we need a copy longer. Job postings stay on the site until they expire or we remove them. We keep the posting, including the poster's private contact details, for up to 24 months after it comes down. Resume files from older job applications, if we still have them, are kept for up to 24 months from the date they were sent.
 - IP hashes used to limit abuse are deleted after about two days.
 - Server logs follow our host's ordinary retention schedule.
 
@@ -397,7 +397,7 @@ Cornhole News is not directed to children under 13. You must confirm that you ar
 
 ## Security
 
-The database uses row level security. Resume files are stored in a private bucket, and a copy is attached to the application email sent to the site operator. No website can guarantee perfect security. Use a password you do not reuse on other sites.
+The database uses row level security. After a job is approved, its public details are visible on the site. The poster's name and email are not. Resume files from older job applications, if any, stay in a private bucket. No website can guarantee perfect security. Use a password you do not reuse on other sites.
 
 ## Changes
 
@@ -520,6 +520,7 @@ Email: [cornholemedia@gmail.com](mailto:cornholemedia@gmail.com)$contact$
 on conflict (slug) do nothing;
 
 -- Contact and job forms, inbox settings, resume storage, the signup age
--- check, Midwest starter copy, and later privacy/terms edits live in
--- supabase/migrations/20261007_*.sql.
--- Run those after this file. They are safe to run more than once.
+-- check, Midwest starter copy, newsletter signups, and the job board live in
+-- supabase/migrations/. Run those after this file, in filename order. They are
+-- safe to run more than once. The job board file is
+-- 20261009_job_postings.sql.

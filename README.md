@@ -22,6 +22,7 @@ voting, comments).
    - `supabase/migrations/20261007_legal_pages_text.sql`
    - `supabase/migrations/20261007_midwest_page_copy.sql`
    - `supabase/migrations/20261008_newsletter_subscribers.sql`
+   - `supabase/migrations/20261009_job_postings.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -117,7 +118,7 @@ redeploys automatically.
 - **About / Jobs / Advertise / Privacy / Terms / Contact** — editable page copy stored in Supabase, with the
   built-in text as a fallback until a page is saved
 - **Contact form** — name, email, optional subject, and message. A copy is saved in Supabase and emailed to the contact inbox.
-- **Job applications** — the form on `/jobs` stores the application, keeps the resume in a private bucket, and attaches that file to the email
+- **Job board** — `/jobs` lists approved Midwest jobs. Employers post for free at `/jobs/post`. An admin reviews each one before it appears. A posting lasts 30 days after approval. Older job applications, if any, stay in the database and are no longer collected on the site.
 - **Inbox addresses** — an admin can change the contact and jobs inboxes at `/admin`
 - **Newsletter** — the footer has an email signup. Addresses are saved in Supabase. Admins can view them and export a CSV at `/admin`. A confirmation email is sent only when `RESEND_API_KEY` is set.
 - **Signup** — requires a confirmation that the person is at least 13 and agrees to the Terms and Privacy Policy
@@ -166,10 +167,13 @@ accounts that are not admins.
    - `supabase/migrations/20261007_legal_pages_text.sql`
    - `supabase/migrations/20261007_midwest_page_copy.sql`
    - `supabase/migrations/20261008_newsletter_subscribers.sql`
+   - `supabase/migrations/20261009_job_postings.sql`
 
    `20261007_midwest_page_copy.sql` fills in Privacy and Terms only while the saved page still
    says PLACEHOLDER. It will not overwrite a page you have already edited.
    `20261008_newsletter_subscribers.sql` adds the footer signup table. Run it after the forms file.
+   `20261009_job_postings.sql` adds the Midwest job board. Run it after the newsletter file.
+   It does not delete old job applications or resume files.
 2. Mark the account that should edit pages. In the SQL editor:
 
 ```sql
@@ -185,9 +189,12 @@ cannot change `is_admin`; use the SQL editor (this also re-applies it for
    Have a lawyer review them, and replace the square-bracket items (`[STATE]`,
    `[MAILING ADDRESS]`, and `[DESIGNATED AGENT NAME]`) before you rely on them.
    The contact and jobs pages show that saved text above the forms.
-4. On the same admin screen, set the two inbox addresses. Contact-form messages
-   go to the first. Job applications go to the second. Both start as
-   `cornholemedia@gmail.com`. Saving here does not require a new deploy.
+4. On the same admin screen, set the two inbox addresses and review job postings.
+   Contact-form messages go to the first address. New job postings are emailed to
+   the second. Both start as `cornholemedia@gmail.com`. Saving here does not
+   require a new deploy. Approve a posting and it shows on `/jobs` for 30 days.
+   Email is sent only when `RESEND_API_KEY` is set. The posting is still saved
+   if that key is missing.
 
 New accounts have to check that they are at least 13 and that they agree to
 the Terms and the Privacy Policy. The site does not ask for a birthdate. If
@@ -223,8 +230,8 @@ src/
     submit/                    → post a new story
     about/, jobs/, advertise/  → pages, content from the pages table
     privacy/, terms/, contact/ → same editor; contact also has a message form
-    jobs/                      → editable page, plus a job application form
-    admin/                     → admin-only editor for those pages, form inboxes, and newsletter subscribers
+    jobs/                      → Midwest job board, plus a free post-a-job form
+    admin/                     → admin-only editor for those pages, form inboxes, job postings, and newsletter subscribers
   components/
     Header.tsx                → nav bar, shows login state and an optional logo
     PasswordInput.tsx         → password field with a show/hide button
