@@ -93,9 +93,9 @@ People share links, start conversations, and comment on what is happening in the
   jobs: {
     title: "Jobs",
     subtitle: "Job openings and opportunities.",
-    body: `## No jobs posted yet
+    body: `Employers can post jobs located in the 12 Midwestern states. Posting is free, and each job is reviewed before it appears here.
 
-note: Check back later, or [contact us](/contact) if you'd like to post a position.`,
+note: An approved job stays on this page for 30 days.`,
   },
   advertise: {
     title: "Advertise on Cornhole News",

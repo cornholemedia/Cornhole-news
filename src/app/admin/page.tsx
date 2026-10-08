@@ -1,6 +1,8 @@
 import Link from "next/link";
+import JobPostingsAdmin from "@/components/JobPostingsAdmin";
 import NewsletterAdmin from "@/components/NewsletterAdmin";
 import SiteSettingsForm from "@/components/SiteSettingsForm";
+import { getJobPostingsForAdmin } from "@/lib/job-postings";
 import { getNewsletterSubscribersForAdmin } from "@/lib/newsletter";
 import { getPagesForAdmin } from "@/lib/pages";
 import { getSiteSettingsForAdmin } from "@/lib/site-settings";
@@ -8,10 +10,11 @@ import { getSiteSettingsForAdmin } from "@/lib/site-settings";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPagesIndex() {
-  const [pages, settings, newsletter] = await Promise.all([
+  const [pages, settings, newsletter, jobs] = await Promise.all([
     getPagesForAdmin(),
     getSiteSettingsForAdmin(),
     getNewsletterSubscribersForAdmin(),
+    getJobPostingsForAdmin(),
   ]);
   const loadError = pages.find((page) => page.loadError)?.loadError ?? null;
 
@@ -20,9 +23,9 @@ export default async function AdminPagesIndex() {
       <h1 className="mb-2 text-2xl font-bold">Edit pages</h1>
       <p className="mb-6 text-[15px] leading-relaxed text-[#666]">
         Change About, Jobs, Advertise, Privacy, Terms, and Contact. The email addresses
-        below are where the contact form and job applications are sent. Newsletter
-        signups from the footer are listed here too. Posts still go
-        through{" "}
+        below are where the contact form and new job postings are sent. Review employer
+        job posts here before they appear on the jobs page. Newsletter signups from the
+        footer are listed here too. Posts still go through{" "}
         <Link href="/submit" className="text-[#3f679b] hover:underline">
           Submit
         </Link>
@@ -35,6 +38,14 @@ export default async function AdminPagesIndex() {
           jobsEmail={settings.jobsEmail}
           stored={settings.stored}
           loadError={settings.loadError}
+        />
+      </div>
+
+      <div className="mb-8">
+        <JobPostingsAdmin
+          postings={jobs.postings}
+          pendingCount={jobs.pendingCount}
+          loadError={jobs.loadError}
         />
       </div>
 

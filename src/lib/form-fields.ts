@@ -9,6 +9,7 @@ export const HONEYPOT_FIELD = "hp_confirm";
 export const CONTACT_LIMIT_PER_HOUR = 5;
 export const JOB_SUBMIT_LIMIT_PER_HOUR = 3;
 export const NEWSLETTER_LIMIT_PER_HOUR = 5;
+export const JOB_POSTING_LIMIT_PER_HOUR = 3;
 
 export const FORM_SAVE_ERROR =
   "We could not save that right now. Please try again in a few minutes, or email cornholemedia@gmail.com.";
@@ -96,19 +97,6 @@ export type ContactInput = {
   message: string;
 };
 
-export type JobInput = {
-  fullName: string;
-  email: string;
-  phone: string;
-  city: string;
-  state: string;
-  position: string;
-  website: string;
-  coverLetter: string;
-  heardAbout: string;
-  consent: boolean;
-};
-
 export function fieldValue(value: FormDataEntryValue | null): string {
   return typeof value === "string" ? value : "";
 }
@@ -184,10 +172,6 @@ export function cleanUrl(value: string): string | null {
   }
 }
 
-export function isUsState(value: string): boolean {
-  return (US_STATES as readonly string[]).includes(value);
-}
-
 export function parseContactFields(input: {
   name: string;
   email: string;
@@ -221,75 +205,6 @@ export function parseNewsletterFields(input: {
   if (!email) return { ok: false, error: "Enter a valid email address." };
 
   return { ok: true, value: { email, source: cleanSourcePath(input.source) } };
-}
-
-export function parseJobFields(input: {
-  fullName: string;
-  email: string;
-  phone: string;
-  city: string;
-  state: string;
-  position: string;
-  website: string;
-  coverLetter: string;
-  heardAbout: string;
-  consent: boolean;
-}): { ok: true; value: JobInput } | { ok: false; error: string } {
-  const fullName = cleanLine(input.fullName, 200);
-  if (!fullName) return { ok: false, error: "Enter your full name." };
-
-  const email = cleanEmail(input.email);
-  if (!email) return { ok: false, error: "Enter a valid email address." };
-
-  const phone = cleanPhone(input.phone);
-  if (!phone) return { ok: false, error: "Enter a phone number." };
-
-  const city = cleanLine(input.city, 80);
-  if (!city) return { ok: false, error: "Enter your city." };
-
-  const state = input.state.trim();
-  if (!isUsState(state)) return { ok: false, error: "Choose a state." };
-
-  const position = cleanLine(input.position, 200);
-  if (!position) return { ok: false, error: "Enter the position you are applying for." };
-
-  const website = cleanUrl(input.website);
-  if (website === null) {
-    return { ok: false, error: "Website must be an http or https link." };
-  }
-
-  const coverLetter = cleanMessage(input.coverLetter, 5000);
-  if (!coverLetter) {
-    return { ok: false, error: "Enter a cover letter or message, up to 5,000 characters." };
-  }
-
-  const heardAbout = cleanOptionalLine(input.heardAbout, 200);
-  if (heardAbout === null) {
-    return { ok: false, error: "How you heard about us must be 200 characters or fewer." };
-  }
-
-  if (!input.consent) {
-    return {
-      ok: false,
-      error: "Confirm that we may use your application, including your resume, as described.",
-    };
-  }
-
-  return {
-    ok: true,
-    value: {
-      fullName,
-      email,
-      phone,
-      city,
-      state,
-      position,
-      website,
-      coverLetter,
-      heardAbout,
-      consent: true,
-    },
-  };
 }
 
 export function resumeKindFromName(fileName: string): ResumeKind | null {

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getSitemapJobPostings } from "@/lib/job-postings";
 import { getSitemapPosts } from "@/lib/posts";
 import { getSiteUrl } from "@/lib/site";
 
@@ -10,6 +11,7 @@ const STATIC_PATHS = [
   "/submit",
   "/about",
   "/jobs",
+  "/jobs/post",
   "/advertise",
   "/privacy",
   "/terms",
@@ -20,7 +22,7 @@ const STATIC_PATHS = [
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();
-  const posts = await getSitemapPosts();
+  const [posts, jobs] = await Promise.all([getSitemapPosts(), getSitemapJobPostings()]);
 
   const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.map((path) => ({
     url: path === "/" ? siteUrl : `${siteUrl}${path}`,
@@ -35,5 +37,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticEntries, ...postEntries];
+  const jobEntries: MetadataRoute.Sitemap = jobs.map((job) => ({
+    url: `${siteUrl}/jobs/${job.id}`,
+    lastModified: job.updatedAt || job.approvedAt || undefined,
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
+  return [...staticEntries, ...postEntries, ...jobEntries];
 }

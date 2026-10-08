@@ -77,7 +77,7 @@ export default function SiteSettingsForm({
       <div>
         <h2 className="font-semibold">Where form emails go</h2>
         <p className="mt-1 text-sm text-[#666]">
-          Change these addresses any time. Contact messages and job applications are emailed here.
+          Change these addresses any time. Contact messages and new job postings are emailed here.
           No code change is required.
         </p>
       </div>
@@ -115,7 +115,7 @@ export default function SiteSettingsForm({
       </div>
       <div>
         <label htmlFor="jobs-recipient" className="field-label">
-          Job applications inbox
+          Job postings inbox
         </label>
         <input
           id="jobs-recipient"
