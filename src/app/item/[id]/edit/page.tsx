@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import PoliticsField from "@/components/PoliticsField";
 
 type PostRow = {
   id: number;
@@ -11,6 +12,7 @@ type PostRow = {
   url: string | null;
   body: string | null;
   author_id: string;
+  is_political: boolean;
 };
 
 export default function EditPostPage() {
@@ -22,6 +24,7 @@ export default function EditPostPage() {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [body, setBody] = useState("");
+  const [isPolitical, setIsPolitical] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,7 +52,7 @@ export default function EditPostPage() {
             .single(),
           supabase
             .from("posts")
-            .select("id, title, url, body, author_id")
+            .select("id, title, url, body, author_id, is_political")
             .eq("id", postId)
             .single(),
         ]);
@@ -74,6 +77,7 @@ export default function EditPostPage() {
       setTitle(row.title);
       setUrl(row.url ?? "");
       setBody(row.body ?? "");
+      setIsPolitical(row.is_political === true);
       setAllowed(true);
       setLoading(false);
     }
@@ -93,6 +97,7 @@ export default function EditPostPage() {
       title: title.trim(),
       url: url.trim() || null,
       body: body.trim() || null,
+      is_political: isPolitical,
     };
 
     const { error: updateError } = await supabase
@@ -168,6 +173,8 @@ export default function EditPostPage() {
             className="field-input"
           />
         </div>
+
+        <PoliticsField id="edit-politics" checked={isPolitical} onChange={setIsPolitical} />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

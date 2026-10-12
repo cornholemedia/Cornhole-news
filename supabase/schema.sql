@@ -6,6 +6,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   username text unique not null,
   is_admin boolean not null default false,
+  show_politics boolean not null default true,
   created_at timestamptz not null default now()
 );
 
@@ -80,7 +81,7 @@ set is_admin = true
 where username = 'Cornhole_Admin';
 
 revoke update on table public.profiles from anon, authenticated;
-grant update (username) on table public.profiles to authenticated;
+grant update (username, show_politics) on table public.profiles to authenticated;
 revoke insert on table public.profiles from anon, authenticated;
 grant insert (id, username) on table public.profiles to authenticated;
 
@@ -114,7 +115,8 @@ create table if not exists public.posts (
   url text,
   body text,
   author_id uuid not null references public.profiles(id) on delete cascade,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  is_political boolean not null default false
 );
 
 alter table public.posts enable row level security;
@@ -228,7 +230,8 @@ select
   p.author_id,
   pr.username as author_username,
   coalesce(v.vote_count, 0) as points,
-  coalesce(c.comment_count, 0) as comment_count
+  coalesce(c.comment_count, 0) as comment_count,
+  p.is_political
 from public.posts p
 join public.profiles pr on pr.id = p.author_id
 left join (

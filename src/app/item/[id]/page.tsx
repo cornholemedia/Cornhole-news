@@ -5,6 +5,7 @@ import { getPostById } from "@/lib/posts";
 import { formatTimeAgo } from "@/lib/time";
 import Comments from "@/components/Comments";
 import AdminPostControls from "@/components/AdminPostControls";
+import PoliticsBadge from "@/components/PoliticsBadge";
 import { pageMeta, summarize } from "@/lib/seo";
 
 export const revalidate = 0;
@@ -65,7 +66,8 @@ export default async function ItemPage({
           ) : (
             post.title
           )}
-          {domain && <span className="ml-1 text-sm text-[#666]">({domain})</span>}
+          {post.is_political ? <PoliticsBadge /> : null}
+          {domain ? <span className="ml-1 text-sm text-[#666]">({domain})</span> : null}
         </div>
 
         <div className="mt-1 text-[13px] text-[#666]">
