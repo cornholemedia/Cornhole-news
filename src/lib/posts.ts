@@ -10,13 +10,23 @@ export type PostWithStats = {
   author_username: string;
   points: number;
   comment_count: number;
+  is_political: boolean;
 };
 
-export async function getTopPosts(limit = 30): Promise<PostWithStats[]> {
+type TopPostOptions = {
+  /** When false, political posts are left out before sorting and limiting. */
+  showPolitics?: boolean;
+};
+
+export async function getTopPosts(limit = 30, options?: TopPostOptions): Promise<PostWithStats[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("posts_with_stats")
-    .select("*")
+  let query = supabase.from("posts_with_stats").select("*");
+
+  if (options?.showPolitics === false) {
+    query = query.eq("is_political", false);
+  }
+
+  const { data, error } = await query
     .order("points", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit);

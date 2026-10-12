@@ -23,6 +23,7 @@ voting, comments).
    - `supabase/migrations/20261007_midwest_page_copy.sql`
    - `supabase/migrations/20261008_newsletter_subscribers.sql`
    - `supabase/migrations/20261009_job_postings.sql`
+   - `supabase/migrations/20261012_politics_tag.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -115,6 +116,7 @@ redeploys automatically.
 - **Voting** — logged-in users can upvote/un-upvote any post
 - **Comments** — logged-in users can comment on any post
 - **Top / New** — real ranked lists pulled from the database, not mock data
+- **Politics tag** — authors and admins can mark a post as political when they submit or edit it. Tagged posts show a small Politics badge. The home page has a Show politics switch (on by default). The choice is remembered in the browser, and on the account when someone is signed in.
 - **About / Jobs / Advertise / Privacy / Terms / Contact** — editable page copy stored in Supabase, with the
   built-in text as a fallback until a page is saved
 - **Contact form** — name, email, optional subject, and message. A copy is saved in Supabase and emailed to the contact inbox.
@@ -168,12 +170,16 @@ accounts that are not admins.
    - `supabase/migrations/20261007_midwest_page_copy.sql`
    - `supabase/migrations/20261008_newsletter_subscribers.sql`
    - `supabase/migrations/20261009_job_postings.sql`
+   - `supabase/migrations/20261012_politics_tag.sql`
 
    `20261007_midwest_page_copy.sql` fills in Privacy and Terms only while the saved page still
    says PLACEHOLDER. It will not overwrite a page you have already edited.
    `20261008_newsletter_subscribers.sql` adds the footer signup table. Run it after the forms file.
    `20261009_job_postings.sql` adds the Midwest job board. Run it after the newsletter file.
    It does not delete old job applications or resume files.
+   `20261012_politics_tag.sql` adds a Politics tag on posts and a saved home-page
+   preference for signed-in readers. Run it after the job board file. It does not
+   change who can read or edit posts. Existing posts stay untagged.
 2. Mark the account that should edit pages. In the SQL editor:
 
 ```sql

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { PostWithStats } from "@/lib/posts";
 import { formatTimeAgo } from "@/lib/time";
+import PoliticsBadge from "./PoliticsBadge";
 import VoteButton from "./VoteButton";
 
 type PostItemProps = {
@@ -32,7 +33,8 @@ export default function PostItem({ post, rank }: PostItemProps) {
               {post.title}
             </Link>
           )}
-          {domain && <span className="ml-1 text-sm text-[#666]">({domain})</span>}
+          {post.is_political ? <PoliticsBadge /> : null}
+          {domain ? <span className="ml-1 text-sm text-[#666]">({domain})</span> : null}
         </div>
 
         <div className="mt-0.5 text-[13px] text-[#666]">

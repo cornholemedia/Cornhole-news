@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import PoliticsField from "@/components/PoliticsField";
 
 export default function SubmitPage() {
   const supabase = createClient();
@@ -11,6 +12,7 @@ export default function SubmitPage() {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [body, setBody] = useState("");
+  const [isPolitical, setIsPolitical] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [generatingTitle, setGeneratingTitle] = useState(false);
@@ -78,6 +80,7 @@ export default function SubmitPage() {
         title: title.trim(),
         url: url.trim() || null,
         body: body.trim() || null,
+        is_political: isPolitical,
         author_id: user.id,
       })
       .select("id")
@@ -154,6 +157,8 @@ export default function SubmitPage() {
             className="field-input"
           />
         </div>
+
+        <PoliticsField id="submit-politics" checked={isPolitical} onChange={setIsPolitical} />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

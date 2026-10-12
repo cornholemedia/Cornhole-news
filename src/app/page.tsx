@@ -1,5 +1,7 @@
 import PostList from "@/components/PostList";
+import ShowPoliticsToggle from "@/components/ShowPoliticsToggle";
 import { getTopPosts } from "@/lib/posts";
+import { resolveShowPolitics } from "@/lib/show-politics-server";
 import { pageMeta } from "@/lib/seo";
 
 export const revalidate = 0;
@@ -12,11 +14,20 @@ export const metadata = pageMeta({
 });
 
 export default async function HomePage() {
-  const posts = await getTopPosts();
+  const showPolitics = await resolveShowPolitics();
+  const posts = await getTopPosts(30, { showPolitics });
 
   return (
     <div>
-      <PostList posts={posts} />
+      <ShowPoliticsToggle showPolitics={showPolitics} />
+      <PostList
+        posts={posts}
+        emptyMessage={
+          showPolitics
+            ? "No posts yet. Be the first to submit one!"
+            : "No stories to show while politics is hidden."
+        }
+      />
     </div>
   );
 }
