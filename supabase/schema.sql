@@ -523,7 +523,9 @@ Email: [cornholemedia@gmail.com](mailto:cornholemedia@gmail.com)$contact$
 on conflict (slug) do nothing;
 
 -- Contact and job forms, inbox settings, resume storage, the signup age
--- check, Midwest starter copy, newsletter signups, and the job board live in
--- supabase/migrations/. Run those after this file, in filename order. They are
--- safe to run more than once. The job board file is
--- 20261009_job_postings.sql.
+-- check, Midwest starter copy, newsletter signups, the job board, the
+-- politics tag, and the daily digest queue live in supabase/migrations/.
+-- Run those after this file, in filename order. They are safe to run more
+-- than once. The digest queue is 20261013_digest_stories.sql. Run it after
+-- 20261012_politics_tag.sql. Publishing uses a Cornhole News profile; the
+-- steps to create that profile are at the top of the digest file.

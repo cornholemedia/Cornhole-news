@@ -2,6 +2,7 @@ import Link from "next/link";
 import JobPostingsAdmin from "@/components/JobPostingsAdmin";
 import NewsletterAdmin from "@/components/NewsletterAdmin";
 import SiteSettingsForm from "@/components/SiteSettingsForm";
+import { getDigestAdminSummary } from "@/lib/digest-review";
 import { getJobPostingsForAdmin } from "@/lib/job-postings";
 import { getNewsletterSubscribersForAdmin } from "@/lib/newsletter";
 import { getPagesForAdmin } from "@/lib/pages";
@@ -10,11 +11,12 @@ import { getSiteSettingsForAdmin } from "@/lib/site-settings";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPagesIndex() {
-  const [pages, settings, newsletter, jobs] = await Promise.all([
+  const [pages, settings, newsletter, jobs, digest] = await Promise.all([
     getPagesForAdmin(),
     getSiteSettingsForAdmin(),
     getNewsletterSubscribersForAdmin(),
     getJobPostingsForAdmin(),
+    getDigestAdminSummary(),
   ]);
   const loadError = pages.find((page) => page.loadError)?.loadError ?? null;
 
@@ -29,8 +31,30 @@ export default async function AdminPagesIndex() {
         <Link href="/submit" className="text-[#3f679b] hover:underline">
           Submit
         </Link>
-        .
+        . The daily Midwest digest is reviewed before it is posted.
       </p>
+
+      <section className="mb-8 rounded border border-[#e0e0e0] bg-white p-4" aria-labelledby="digest-admin-heading">
+        <h2 id="digest-admin-heading" className="font-semibold">
+          Midwest digest
+        </h2>
+        <p className="mt-1 text-sm text-[#3a3a3a]">
+          Stories sent by the daily digest stay hidden until you publish them.
+          {digest.pendingCount > 0
+            ? ` ${digest.pendingCount} ${digest.pendingCount === 1 ? "story is" : "stories are"} waiting.`
+            : ""}
+        </p>
+        {digest.loadError ? (
+          <p role="alert" className="mt-3 text-sm text-red-700">
+            {digest.loadError}
+          </p>
+        ) : null}
+        <p className="mt-3 text-sm">
+          <Link href="/admin/review" className="text-[#3f679b] hover:underline">
+            Review digest
+          </Link>
+        </p>
+      </section>
 
       <div className="mb-8">
         <SiteSettingsForm
