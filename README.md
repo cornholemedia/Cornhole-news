@@ -24,6 +24,7 @@ voting, comments).
    - `supabase/migrations/20261008_newsletter_subscribers.sql`
    - `supabase/migrations/20261009_job_postings.sql`
    - `supabase/migrations/20261012_politics_tag.sql`
+   - `supabase/migrations/20261013_digest_stories.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -36,13 +37,13 @@ voting, comments).
 ### 3. Connect the repo to Vercel
 1. Go to [vercel.com](https://vercel.com) → **Add New → Project** → import your GitHub repo.
 2. Before deploying, add these **Environment Variables**.
-   Set them for Production and Preview. Do not put the Resend key in any
-   variable whose name starts with `NEXT_PUBLIC_`. The service role key is
-   not used by this site.
+   Set them for Production and Preview. Do not put the Resend key, the
+   digest secret, or the service role key in any variable whose name starts
+   with `NEXT_PUBLIC_`.
    - `NEXT_PUBLIC_SUPABASE_URL` = your Supabase Project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = your Supabase anon public key.
-     The contact form and job applications use this key. They do not need
-     the service role secret.
+     The contact form and job board use this key. The digest ingest route
+     does not. It uses `SUPABASE_SERVICE_ROLE_KEY` below.
    - `RESEND_API_KEY` = your Resend API key. This sends the form emails
      and the newsletter confirmation. If it is missing, the site still saves
      the form or signup and tells the visitor it was received. Nothing is
@@ -53,6 +54,13 @@ voting, comments).
      `Cornhole News <noreply@cornholenews.news>` and redeploy.
    - `SHOW_ADS` = `true` only when you want the dashed ad boxes to show.
      Leave it unset until real ads exist. Change it in Vercel, then redeploy.
+   - `DIGEST_INGEST_SECRET` = a long random string, at least 16 characters.
+     The daily Midwest digest job sends it as `Authorization: Bearer …`.
+     The review page does not use this secret.
+   - `SUPABASE_SERVICE_ROLE_KEY` = the service role key, or the newer secret
+     key (`sb_secret_…`), from Supabase **Project Settings → API Keys**.
+     Only the digest ingest route uses it, and only on the server. Do not
+     create a `NEXT_PUBLIC_` copy. Redeploy after you set it.
    - `NEXT_PUBLIC_SITE_URL` is optional. The site already uses
      `https://cornholenews.news`. Set this only if the public address changes.
 3. Click **Deploy**. Vercel builds the site in the cloud — nothing runs on
@@ -125,6 +133,36 @@ redeploys automatically.
 - **Newsletter** — the footer has an email signup. Addresses are saved in Supabase. Admins can view them and export a CSV at `/admin`. A confirmation email is sent only when `RESEND_API_KEY` is set.
 - **Signup** — requires a confirmation that the person is at least 13 and agrees to the Terms and Privacy Policy
 - **Ads** — the sidebar placeholders stay hidden unless `SHOW_ADS=true`
+- **Daily digest** — an automated job can send Midwest stories to `/api/digest/ingest`. They stay hidden until an admin publishes them at `/admin/review`. Published stories are normal posts by Cornhole News, and they are not tagged as political.
+
+## Daily Midwest digest
+
+The job sends one day at a time. Stories stay in a private queue until an admin opens `/admin/review` and clicks **Publish all**. Delete hides one story. A later send of that same date and URL does not bring a deleted story back, and it does not change a story that was already published. Links left out of a later send stay pending until you delete them. Nothing is posted automatically.
+
+Run `supabase/migrations/20261013_digest_stories.sql` in the Supabase SQL editor, then create the **Cornhole News** author using the steps at the top of that file. Set `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel and redeploy.
+
+```bash
+curl -sS -X POST "https://cornholenews.news/api/digest/ingest" \
+  -H "Authorization: Bearer $DIGEST_INGEST_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "digest_date": "2026-10-13",
+    "stories": [
+      {
+        "section": "QUIRKY",
+        "headline": "Town crowns a new cornhole champion",
+        "url": "https://example.com/cornhole-champion",
+        "paper": "Des Moines Register",
+        "state": "IA",
+        "synopsis": "A packed gym watched the final bags land."
+      }
+    ]
+  }'
+```
+
+`section` is exactly one of `QUIRKY`, `SERIOUS`, `AROUND THE MIDWEST`, or `NATIONAL PRESS`. `state` is the two-letter code that shows up as "Paper, ST". `url` must be `https`. At most 100 stories per request. A successful response looks like `{"ok":true,"digest_date":"2026-10-13","inserted":1,"updated":0,"skipped":0}`. `skipped` means that URL was already published or deleted for that date and was left alone.
+
+On the review page, pick a date. The newest date that still has waiting stories is selected by default. **Publish all** creates one post per remaining story: the headline is the title, the link is the URL, and the text is the synopsis plus ` — Paper, ST`. The author is Cornhole News. `is_political` stays false.
 
 ## Adding a logo
 
@@ -171,6 +209,7 @@ accounts that are not admins.
    - `supabase/migrations/20261008_newsletter_subscribers.sql`
    - `supabase/migrations/20261009_job_postings.sql`
    - `supabase/migrations/20261012_politics_tag.sql`
+   - `supabase/migrations/20261013_digest_stories.sql`
 
    `20261007_midwest_page_copy.sql` fills in Privacy and Terms only while the saved page still
    says PLACEHOLDER. It will not overwrite a page you have already edited.
@@ -180,6 +219,9 @@ accounts that are not admins.
    `20261012_politics_tag.sql` adds a Politics tag on posts and a saved home-page
    preference for signed-in readers. Run it after the job board file. It does not
    change who can read or edit posts. Existing posts stay untagged.
+   `20261013_digest_stories.sql` adds the queue for the daily Midwest digest.
+   Run it after the politics file. It does not publish anything. Create the
+   Cornhole News author after it, using the steps at the top of that file.
 2. Mark the account that should edit pages. In the SQL editor:
 
 ```sql
@@ -195,7 +237,8 @@ cannot change `is_admin`; use the SQL editor (this also re-applies it for
    Have a lawyer review them, and replace the square-bracket items (`[STATE]`,
    `[MAILING ADDRESS]`, and `[DESIGNATED AGENT NAME]`) before you rely on them.
    The contact and jobs pages show that saved text above the forms.
-4. On the same admin screen, set the two inbox addresses and review job postings.
+4. On the same admin screen, set the two inbox addresses, open **Review digest**
+   for the daily Midwest queue, and review job postings.
    Contact-form messages go to the first address. New job postings are emailed to
    the second. Both start as `cornholemedia@gmail.com`. Saving here does not
    require a new deploy. Approve a posting and it shows on `/jobs` for 30 days.
@@ -237,7 +280,8 @@ src/
     about/, jobs/, advertise/  → pages, content from the pages table
     privacy/, terms/, contact/ → same editor; contact also has a message form
     jobs/                      → Midwest job board, plus a free post-a-job form
-    admin/                     → admin-only editor for those pages, form inboxes, job postings, and newsletter subscribers
+    admin/                     → admin-only editor for those pages, form inboxes, job postings, newsletter subscribers, and /admin/review for the daily digest
+    api/digest/ingest/         → server-only endpoint the daily job uses to submit pending stories
   components/
     Header.tsx                → nav bar, shows login state and an optional logo
     PasswordInput.tsx         → password field with a show/hide button
@@ -268,6 +312,9 @@ Optional local values in `.env.local`:
 - `RESEND_API_KEY` and `CONTACT_FROM_EMAIL` send the form emails. Without the
   Resend key, a saved form still shows a success message.
 - `SHOW_ADS=true` shows the dashed ad boxes. Leave it out to hide them.
+- `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` let a local server
+  accept a digest. Leave them out and the ingest route answers that it is
+  not configured. Do not prefix either name with `NEXT_PUBLIC_`.
 - `NEXT_PUBLIC_SITE_URL=http://localhost:3000` only if you want local links in
   previews. Production should keep `https://cornholenews.news`.
 
