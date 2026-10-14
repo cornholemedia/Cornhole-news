@@ -5,7 +5,9 @@
 --
 -- The daily job does not publish stories. It POSTs them to /api/digest/ingest.
 -- They land here as pending and stay off the public site. An admin opens
--- /admin/review, deletes anything that should not run, and clicks Publish all.
+-- /admin/review, deletes anything that should not run, and publishes the
+-- stories to keep. Publishing one story at a time is
+-- supabase/migrations/20261014_publish_one_digest_story.sql.
 -- Publishing copies each kept story into posts and marks the queue row
 -- published. Deleted rows stay deleted: a later ingest of the same date and
 -- URL does not bring them back and does not create a second post.

@@ -134,3 +134,32 @@ test("digest migration is admin-only, pending until publish, and authored by Cor
   assert.equal(/NEXT_PUBLIC_DIGEST/.test(routeSource), false);
   assert.match(adminPage, /\/admin\/review/);
 });
+
+test("publishing one digest story locks the row and will not insert a second post", () => {
+  const one = readFileSync(
+    new URL("../../supabase/migrations/20261014_publish_one_digest_story.sql", import.meta.url),
+    "utf8"
+  );
+  const reviewUi = readFileSync(new URL("../components/DigestReview.tsx", import.meta.url), "utf8");
+  const actions = readFileSync(new URL("../app/admin/review/actions.ts", import.meta.url), "utf8");
+
+  const alreadyPublished = one.indexOf("story.status = 'published'");
+  const insertPost = one.indexOf("insert into public.posts");
+  assert.ok(alreadyPublished > 0);
+  assert.ok(insertPost > alreadyPublished);
+  assert.match(one, /for update/);
+  assert.match(one, /return story\.post_id/);
+  assert.match(one, /username = 'Cornhole News'/);
+  assert.match(one, /story\.synopsis \|\| ' — ' \|\| story\.paper \|\| ', ' \|\| story\.state/);
+  assert.match(one, /bot_id,\s*false/);
+  assert.match(one, /grant execute on function public\.publish_digest_story\(uuid\) to authenticated/);
+  assert.equal(
+    /grant execute on function public\.publish_digest_story\(uuid\) to (anon|service_role)/.test(one),
+    false
+  );
+
+  assert.match(actions, /publish_digest_story/);
+  assert.equal(/publish_digest_stories/.test(actions), false);
+  assert.equal(reviewUi.includes("Publish all"), false);
+  assert.match(reviewUi, /Publishing\.\.\./);
+});

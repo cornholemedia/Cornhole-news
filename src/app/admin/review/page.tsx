@@ -93,7 +93,6 @@ export default async function AdminDigestReviewPage({
 
       {!review.loadError && review.selectedDate && review.selectedLabel ? (
         <DigestReview
-          digestDate={review.selectedDate}
           dateLabel={review.selectedLabel}
           groups={review.groups}
           pendingCount={review.pendingCount}
