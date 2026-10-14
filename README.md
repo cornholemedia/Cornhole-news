@@ -25,6 +25,7 @@ voting, comments).
    - `supabase/migrations/20261009_job_postings.sql`
    - `supabase/migrations/20261012_politics_tag.sql`
    - `supabase/migrations/20261013_digest_stories.sql`
+   - `supabase/migrations/20261014_publish_one_digest_story.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -137,9 +138,9 @@ redeploys automatically.
 
 ## Daily Midwest digest
 
-The job sends one day at a time. Stories stay in a private queue until an admin opens `/admin/review` and clicks **Publish all**. Delete hides one story. A later send of that same date and URL does not bring a deleted story back, and it does not change a story that was already published. Links left out of a later send stay pending until you delete them. Nothing is posted automatically.
+The job sends one day at a time. Stories stay in a private queue until an admin opens `/admin/review` and clicks **Publish** on each one. Delete hides one story. A later send of that same date and URL does not bring a deleted story back, and it does not change a story that was already published. Links left out of a later send stay pending until you delete them. Nothing is posted automatically. Clicking Publish twice does not create two posts.
 
-Run `supabase/migrations/20261013_digest_stories.sql` in the Supabase SQL editor, then create the **Cornhole News** author using the steps at the top of that file. Set `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel and redeploy.
+Run `supabase/migrations/20261013_digest_stories.sql` in the Supabase SQL editor, then `supabase/migrations/20261014_publish_one_digest_story.sql`. Create the **Cornhole News** author using the steps at the top of the first digest file. Set `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel and redeploy.
 
 ```bash
 curl -sS -X POST "https://cornholenews.news/api/digest/ingest" \
@@ -162,7 +163,7 @@ curl -sS -X POST "https://cornholenews.news/api/digest/ingest" \
 
 `section` is exactly one of `QUIRKY`, `SERIOUS`, `AROUND THE MIDWEST`, or `NATIONAL PRESS`. `state` is the two-letter code that shows up as "Paper, ST". `url` must be `https`. At most 100 stories per request. A successful response looks like `{"ok":true,"digest_date":"2026-10-13","inserted":1,"updated":0,"skipped":0}`. `skipped` means that URL was already published or deleted for that date and was left alone.
 
-On the review page, pick a date. The newest date that still has waiting stories is selected by default. **Publish all** creates one post per remaining story: the headline is the title, the link is the URL, and the text is the synopsis plus ` — Paper, ST`. The author is Cornhole News. `is_political` stays false.
+On the review page, pick a date. The newest date that still has waiting stories is selected by default. **Publish** on a story creates one post: the headline is the title, the link is the URL, and the text is the synopsis plus ` — Paper, ST`. The author is Cornhole News. `is_political` stays false. The story then shows as published, with a link to the new post.
 
 ## Adding a logo
 
@@ -210,6 +211,7 @@ accounts that are not admins.
    - `supabase/migrations/20261009_job_postings.sql`
    - `supabase/migrations/20261012_politics_tag.sql`
    - `supabase/migrations/20261013_digest_stories.sql`
+   - `supabase/migrations/20261014_publish_one_digest_story.sql`
 
    `20261007_midwest_page_copy.sql` fills in Privacy and Terms only while the saved page still
    says PLACEHOLDER. It will not overwrite a page you have already edited.
@@ -222,6 +224,9 @@ accounts that are not admins.
    `20261013_digest_stories.sql` adds the queue for the daily Midwest digest.
    Run it after the politics file. It does not publish anything. Create the
    Cornhole News author after it, using the steps at the top of that file.
+   `20261014_publish_one_digest_story.sql` lets the review page publish one
+   story at a time. Run it after the digest queue file. Clicking Publish
+   twice does not create a second post.
 2. Mark the account that should edit pages. In the SQL editor:
 
 ```sql

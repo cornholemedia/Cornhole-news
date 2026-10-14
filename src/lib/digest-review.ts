@@ -22,6 +22,8 @@ export type DigestReviewStory = {
   headline: string;
   url: string;
   body: string;
+  status: "pending" | "published";
+  postId: number | null;
 };
 
 export type DigestReviewGroup = {
@@ -61,6 +63,8 @@ type StoryRow = {
   paper: string;
   state: string;
   synopsis: string;
+  status: string;
+  post_id: number | string | null;
 };
 
 const emptyReview: DigestReview = {
@@ -183,12 +187,13 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
 
     const { data, error } = await supabase
       .from("digest_stories")
-      .select("id, section, headline, url, paper, state, synopsis")
+      .select("id, section, headline, url, paper, state, synopsis, status, post_id")
       .eq("digest_date", selectedDate)
-      .eq("status", "pending")
+      .in("status", ["pending", "published"])
+      .order("status", { ascending: true })
       .order("created_at", { ascending: true })
       .order("id", { ascending: true })
-      .limit(500);
+      .limit(800);
 
     if (error) {
       console.error("Error loading digest stories:", error.message);
@@ -202,11 +207,15 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
     for (const section of DIGEST_SECTIONS) buckets.set(section, []);
 
     for (const row of (data ?? []) as StoryRow[]) {
+      if (row.status !== "pending" && row.status !== "published") continue;
+      const postId = row.post_id == null ? null : Number(row.post_id);
       const story: DigestReviewStory = {
         id: row.id,
         headline: row.headline,
         url: row.url,
         body: digestPostBody(row.synopsis, row.paper, row.state),
+        status: row.status,
+        postId: postId != null && Number.isInteger(postId) && postId > 0 ? postId : null,
       };
       const key = isDigestSection(row.section) ? row.section : row.section;
       const list = buckets.get(key) ?? [];
@@ -226,10 +235,13 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
     }
 
     review.groups = groups;
-    const listed = groups.reduce((sum, group) => sum + group.stories.length, 0);
-    const reported = dates.find((row) => row.date === selectedDate)?.pendingCount ?? listed;
-    review.pendingCount = listed;
-    review.moreWaiting = Math.max(0, reported - listed);
+    const listedPending = groups.reduce(
+      (sum, group) => sum + group.stories.filter((story) => story.status === "pending").length,
+      0
+    );
+    const reported = dates.find((row) => row.date === selectedDate)?.pendingCount ?? listedPending;
+    review.pendingCount = listedPending;
+    review.moreWaiting = Math.max(0, reported - listedPending);
     return review;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not load digest stories.";

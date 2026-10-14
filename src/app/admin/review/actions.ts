@@ -1,15 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  DIGEST_MIGRATION_HINT,
-  missingDigestSchema,
-  parseDigestDate,
-} from "@/lib/digest";
+import { DIGEST_MIGRATION_HINT, DIGEST_PUBLISH_ONE_HINT, missingDigestSchema } from "@/lib/digest";
 import { createClient } from "@/lib/supabase/server";
 
 export type DigestActionResult =
-  | { ok: true; message: string }
+  | { ok: true; message: string; postId?: number }
   | { ok: false; error: string };
 
 const STORY_ID =
@@ -45,6 +41,7 @@ function actionError(error: { message: string; code?: string }): string {
   if (error.message.startsWith("digest:")) {
     return error.message.slice("digest:".length).trim();
   }
+  if (/publish_digest_story/i.test(error.message)) return DIGEST_PUBLISH_ONE_HINT;
   if (missingDigestSchema(error.message)) return DIGEST_MIGRATION_HINT;
   return "That could not be saved.";
 }
@@ -84,32 +81,29 @@ export async function deleteDigestStory(id: string): Promise<DigestActionResult>
   return { ok: true, message: "Deleted. It stays off the site." };
 }
 
-export async function publishDigestDate(digestDate: string): Promise<DigestActionResult> {
-  const date = parseDigestDate(digestDate);
-  if (!date) return { ok: false, error: "Choose a digest date." };
+export async function publishDigestStory(id: string): Promise<DigestActionResult> {
+  if (!STORY_ID.test(id)) return { ok: false, error: "That story could not be found." };
 
   const { supabase, error } = await adminClient();
   if (error || !supabase) {
     return { ok: false, error: error ?? "You need an admin account to do that." };
   }
 
-  const { data, error: publishError } = await supabase.rpc("publish_digest_stories", {
-    p_digest_date: date,
+  const { data, error: publishError } = await supabase.rpc("publish_digest_story", {
+    p_id: id,
   });
 
   if (publishError) {
-    console.error("Could not publish digest stories:", publishError.message);
+    console.error("Could not publish a digest story:", publishError.message);
     return { ok: false, error: actionError(publishError) };
   }
 
-  const published = Number(data) || 0;
-  revalidateDigest(published > 0);
-
-  if (published === 0) {
-    return { ok: true, message: "Nothing was waiting for that date." };
+  const postId = Number(data);
+  if (!Number.isInteger(postId) || postId <= 0) {
+    return { ok: false, error: "That story could not be published." };
   }
 
-  const noun = published === 1 ? "story" : "stories";
-  const more = published === 500 ? " If more are still waiting, publish again." : "";
-  return { ok: true, message: `Published ${published} ${noun}.${more}` };
+  revalidateDigest(true);
+  revalidatePath(`/item/${postId}`);
+  return { ok: true, message: "Published.", postId };
 }

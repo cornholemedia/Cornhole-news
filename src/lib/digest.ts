@@ -18,6 +18,9 @@ export const DIGEST_MIGRATION_PATH = "supabase/migrations/20261013_digest_storie
 export const DIGEST_MIGRATION_HINT =
   "Digest stories are not in the database yet. In Supabase, open the SQL editor and run supabase/migrations/20261013_digest_stories.sql.";
 
+export const DIGEST_PUBLISH_ONE_HINT =
+  "Publishing one story needs a database update. In Supabase, open the SQL editor and run supabase/migrations/20261014_publish_one_digest_story.sql.";
+
 export const DIGEST_BOT_SETUP =
   "Published stories are written by a profile named Cornhole News. Create that user before publishing. The steps are at the top of supabase/migrations/20261013_digest_stories.sql.";
 
@@ -247,7 +250,7 @@ export function bearerMatches(header: string | null, secret: string): boolean {
 }
 
 export function missingDigestSchema(message: string): boolean {
-  return /digest_stories|schema cache|does not exist|admin_digest_dates|publish_digest_stories|ingest_digest_stories/i.test(
+  return /digest_stories|schema cache|does not exist|admin_digest_dates|publish_digest_story|ingest_digest_stories/i.test(
     message
   );
 }

@@ -527,5 +527,6 @@ on conflict (slug) do nothing;
 -- politics tag, and the daily digest queue live in supabase/migrations/.
 -- Run those after this file, in filename order. They are safe to run more
 -- than once. The digest queue is 20261013_digest_stories.sql. Run it after
--- 20261012_politics_tag.sql. Publishing uses a Cornhole News profile; the
--- steps to create that profile are at the top of the digest file.
+-- 20261012_politics_tag.sql, then run 20261014_publish_one_digest_story.sql
+-- so each story can be published on its own. Publishing uses a Cornhole News
+-- profile; the steps to create that profile are at the top of the digest file.
