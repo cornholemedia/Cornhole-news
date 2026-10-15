@@ -8,6 +8,7 @@ import {
   digestPostBody,
   parseDigestDate,
   parseIngestPayload,
+  recentDigestWindow,
 } from "./digest.ts";
 
 const migration = readFileSync(
@@ -218,7 +219,29 @@ test("a digest politics flag is stored, copied onto the post, and delete all ski
   assert.match(actions, /delete_pending_digest_stories/);
   assert.match(reviewUi, /type="checkbox"/);
   assert.match(reviewUi, /Politics/);
-  assert.match(reviewUi, /Delete all/);
+  assert.match(reviewUi, /Finished/);
+  assert.equal(reviewUi.includes("Delete all"), false);
+  assert.equal(reviewUi.includes("Show this date"), false);
+  assert.match(reviewUi, /router\.push\(`\/admin\/review\?date=/);
   assert.match(reviewUi, /window\.confirm/);
   assert.match(reviewUi, /Published stories stay on the site/);
+  assert.match(actions, /delete_pending_digest_stories/);
+});
+
+test("the review date list is the last 7 Chicago days", () => {
+  const duringPreviousEvening = recentDigestWindow(new Date("2026-10-16T03:30:00Z"));
+  assert.deepEqual(duringPreviousEvening, [
+    "2026-10-15",
+    "2026-10-14",
+    "2026-10-13",
+    "2026-10-12",
+    "2026-10-11",
+    "2026-10-10",
+    "2026-10-09",
+  ]);
+
+  const afterChicagoMidnight = recentDigestWindow(new Date("2026-10-16T05:30:00Z"));
+  assert.equal(afterChicagoMidnight[0], "2026-10-16");
+  assert.equal(afterChicagoMidnight[6], "2026-10-10");
+  assert.equal(afterChicagoMidnight.length, 7);
 });

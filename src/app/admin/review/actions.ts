@@ -182,6 +182,11 @@ export async function deletePendingDigestStories(date: string): Promise<DigestAc
 
   revalidateDigest(false);
   if (count === 0) return { ok: true, message: "Nothing was still waiting." };
-  if (count === 1) return { ok: true, message: "Deleted 1 story. It stays off the site." };
-  return { ok: true, message: `Deleted ${count} stories. They stay off the site.` };
+  if (count === 1) {
+    return { ok: true, message: "Finished. 1 story was deleted and stays off the site." };
+  }
+  return {
+    ok: true,
+    message: `Finished. ${count} stories were deleted and stay off the site.`,
+  };
 }
