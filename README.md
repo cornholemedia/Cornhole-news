@@ -26,6 +26,7 @@ voting, comments).
    - `supabase/migrations/20261012_politics_tag.sql`
    - `supabase/migrations/20261013_digest_stories.sql`
    - `supabase/migrations/20261014_publish_one_digest_story.sql`
+   - `supabase/migrations/20261015_digest_story_politics.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -134,13 +135,13 @@ redeploys automatically.
 - **Newsletter** — the footer has an email signup. Addresses are saved in Supabase. Admins can view them and export a CSV at `/admin`. A confirmation email is sent only when `RESEND_API_KEY` is set.
 - **Signup** — requires a confirmation that the person is at least 13 and agrees to the Terms and Privacy Policy
 - **Ads** — the sidebar placeholders stay hidden unless `SHOW_ADS=true`
-- **Daily digest** — an automated job can send Midwest stories to `/api/digest/ingest`. They stay hidden until an admin publishes them at `/admin/review`. Published stories are normal posts by Cornhole News, and they are not tagged as political.
+- **Daily digest** — an automated job can send Midwest stories to `/api/digest/ingest`. They stay hidden until an admin publishes them at `/admin/review`. Published stories are normal posts by Cornhole News. Politics stays off unless the admin turns it on for that story.
 
 ## Daily Midwest digest
 
-The job sends one day at a time. Stories stay in a private queue until an admin opens `/admin/review` and clicks **Publish** on each one. Delete hides one story. A later send of that same date and URL does not bring a deleted story back, and it does not change a story that was already published. Links left out of a later send stay pending until you delete them. Nothing is posted automatically. Clicking Publish twice does not create two posts.
+The job sends one day at a time. Stories stay in a private queue until an admin opens `/admin/review` and clicks **Publish** on each one. Each story has a Politics checkbox, off by default. Delete hides one story. **Delete all** hides every story still waiting for the selected date and leaves published stories up. A later send of that same date and URL does not bring a deleted story back, and it does not change a story that was already published or clear its Politics checkbox. Links left out of a later send stay pending until you delete them. Nothing is posted automatically. Clicking Publish twice does not create two posts.
 
-Run `supabase/migrations/20261013_digest_stories.sql` in the Supabase SQL editor, then `supabase/migrations/20261014_publish_one_digest_story.sql`. Create the **Cornhole News** author using the steps at the top of the first digest file. Set `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel and redeploy.
+Run `supabase/migrations/20261013_digest_stories.sql` in the Supabase SQL editor, then `supabase/migrations/20261014_publish_one_digest_story.sql`, then `supabase/migrations/20261015_digest_story_politics.sql`. Create the **Cornhole News** author using the steps at the top of the first digest file. Set `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel and redeploy.
 
 ```bash
 curl -sS -X POST "https://cornholenews.news/api/digest/ingest" \
@@ -163,7 +164,7 @@ curl -sS -X POST "https://cornholenews.news/api/digest/ingest" \
 
 `section` is exactly one of `QUIRKY`, `SERIOUS`, `AROUND THE MIDWEST`, or `NATIONAL PRESS`. `state` is the two-letter code that shows up as "Paper, ST". `url` must be `https`. At most 100 stories per request. A successful response looks like `{"ok":true,"digest_date":"2026-10-13","inserted":1,"updated":0,"skipped":0}`. `skipped` means that URL was already published or deleted for that date and was left alone.
 
-On the review page, pick a date. The newest date that still has waiting stories is selected by default. **Publish** on a story creates one post: the headline is the title, the link is the URL, and the text is the synopsis plus ` — Paper, ST`. The author is Cornhole News. `is_political` stays false. The story then shows as published, with a link to the new post.
+On the review page, pick a date. The newest date that still has waiting stories is selected by default. **Publish** on a story creates one post: the headline is the title, the link is the URL, and the text is the synopsis plus ` — Paper, ST`. The author is Cornhole News. `is_political` follows that story's Politics checkbox. The story then shows as published, with a link to the new post. Turning Politics on or off after publishing updates the linked post. The checkbox is saved on the queue row, so a reload before publishing keeps it.
 
 ## Adding a logo
 
@@ -212,6 +213,7 @@ accounts that are not admins.
    - `supabase/migrations/20261012_politics_tag.sql`
    - `supabase/migrations/20261013_digest_stories.sql`
    - `supabase/migrations/20261014_publish_one_digest_story.sql`
+   - `supabase/migrations/20261015_digest_story_politics.sql`
 
    `20261007_midwest_page_copy.sql` fills in Privacy and Terms only while the saved page still
    says PLACEHOLDER. It will not overwrite a page you have already edited.
@@ -227,6 +229,9 @@ accounts that are not admins.
    `20261014_publish_one_digest_story.sql` lets the review page publish one
    story at a time. Run it after the digest queue file. Clicking Publish
    twice does not create a second post.
+   `20261015_digest_story_politics.sql` adds a Politics flag on each digest
+   story and lets Delete all hide every story still waiting for one date.
+   Run it after the one-story publish file. Existing stories stay untagged.
 2. Mark the account that should edit pages. In the SQL editor:
 
 ```sql

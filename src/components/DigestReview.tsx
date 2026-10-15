@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import {
   deleteDigestStory,
+  deletePendingDigestStories,
   publishDigestStory,
+  setDigestStoryPolitics,
   type DigestActionResult,
 } from "@/app/admin/review/actions";
 
@@ -16,6 +18,7 @@ type ReviewStory = {
   body: string;
   status: "pending" | "published";
   postId: number | null;
+  isPolitical: boolean;
 };
 
 type ReviewGroup = {
@@ -25,28 +28,52 @@ type ReviewGroup = {
 
 type PendingAction = {
   id: string;
-  action: "publish" | "delete";
+  action: "publish" | "delete" | "delete-all" | "politics";
 };
 
 export default function DigestReview({
+  digestDate,
   dateLabel,
   groups,
   pendingCount,
   moreWaiting,
+  politicsReady,
   botReady,
 }: {
+  digestDate: string;
   dateLabel: string;
   groups: ReviewGroup[];
   pendingCount: number;
   moreWaiting: number;
+  politicsReady: boolean;
   botReady: boolean;
 }) {
   const router = useRouter();
   const busyRef = useRef(false);
   const [pending, setPending] = useState<PendingAction | null>(null);
+  const [flags, setFlags] = useState<Record<string, boolean>>({});
+  const [flagSource, setFlagSource] = useState(groups);
   const [message, setMessage] = useState<string | null>(null);
   const [postId, setPostId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  if (flagSource !== groups) {
+    setFlagSource(groups);
+    setFlags((current) => {
+      const known = new Map(
+        groups.flatMap((group) => group.stories.map((story) => [story.id, story.isPolitical] as const))
+      );
+      let changed = false;
+      const next = { ...current };
+      for (const [id, value] of Object.entries(current)) {
+        if (known.get(id) === value) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }
 
   async function run(
     id: string,
@@ -82,7 +109,44 @@ export default function DigestReview({
     }
   }
 
+  async function onPolitics(storyId: string, next: boolean) {
+    if (busyRef.current || !politicsReady) return;
+    busyRef.current = true;
+    setFlags((current) => ({ ...current, [storyId]: next }));
+    setPending({ id: storyId, action: "politics" });
+    setError(null);
+    setMessage(null);
+    setPostId(null);
+    try {
+      const result = await setDigestStoryPolitics(storyId, next);
+      if (!result.ok) {
+        setFlags((current) => {
+          const copy = { ...current };
+          delete copy[storyId];
+          return copy;
+        });
+        setError(result.error);
+        return;
+      }
+      setMessage(result.message);
+      setPostId(result.postId ?? null);
+      router.refresh();
+    } catch {
+      setFlags((current) => {
+        const copy = { ...current };
+        delete copy[storyId];
+        return copy;
+      });
+      setError("That could not be saved.");
+    } finally {
+      busyRef.current = false;
+      setPending(null);
+    }
+  }
+
   const busy = pending !== null;
+  const waiting = pendingCount + moreWaiting;
+  const deletingAll = pending?.action === "delete-all";
 
   return (
     <section aria-labelledby="digest-review-heading">
@@ -91,12 +155,12 @@ export default function DigestReview({
           {dateLabel}
         </h2>
         <p className="mt-1 text-sm text-[#3a3a3a]">
-          {pendingCount === 0
+          {waiting === 0
             ? "Nothing is waiting for this date. Published stories stay listed here."
-            : `${pendingCount} ${pendingCount === 1 ? "story is" : "stories are"} still hidden. Publish posts that one story as Cornhole News. Politics stays off.`}
+            : `${waiting} ${waiting === 1 ? "story is" : "stories are"} still hidden. Publish posts that one story as Cornhole News. Politics is off until you turn it on.`}
           {moreWaiting > 0 ? (
             <span className="mt-1 block">
-              {moreWaiting} more {moreWaiting === 1 ? "is" : "are"} waiting beyond this list.
+              {moreWaiting} of those {moreWaiting === 1 ? "is" : "are"} beyond this list. Delete all still includes them.
             </span>
           ) : null}
         </p>
@@ -119,6 +183,27 @@ export default function DigestReview({
             {error}
           </p>
         ) : null}
+
+        {waiting > 0 ? (
+          <div className="mt-4">
+            <button
+              type="button"
+              disabled={busy}
+              aria-label={`Delete all waiting stories for ${dateLabel}`}
+              onClick={() =>
+                run(
+                  digestDate,
+                  "delete-all",
+                  () => deletePendingDigestStories(digestDate),
+                  `Delete every story still waiting for ${dateLabel}? Published stories stay on the site. A later digest will not bring these links back for this date.`
+                )
+              }
+              className="field-button min-h-11 rounded border border-red-700 bg-white px-3 text-sm font-medium text-red-700 disabled:opacity-60"
+            >
+              {deletingAll ? "Deleting..." : "Delete all"}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {groups.map((group) => {
@@ -132,6 +217,7 @@ export default function DigestReview({
               {group.stories.map((story) => {
                 const publishing = pending?.id === story.id && pending.action === "publish";
                 const deleting = pending?.id === story.id && pending.action === "delete";
+                const checked = flags[story.id] ?? story.isPolitical;
                 return (
                   <li key={story.id} className="rounded border border-[#e0e0e0] bg-white p-3">
                     <h3 className="font-semibold wrap-break-word text-[#1a1a1a]">
@@ -147,48 +233,66 @@ export default function DigestReview({
                     <p className="mt-2 text-sm leading-relaxed wrap-break-word text-[#1a1a1a]">
                       {story.body}
                     </p>
-                    {story.status === "pending" ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          disabled={busy || !botReady}
-                          onClick={() => run(story.id, "publish", () => publishDigestStory(story.id))}
-                          className="field-button min-h-11 rounded bg-[#3f679b] px-3 text-sm font-medium text-white hover:bg-[#345580] disabled:opacity-60"
-                        >
-                          {publishing ? "Publishing..." : "Publish"}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() =>
-                            run(
-                              story.id,
-                              "delete",
-                              () => deleteDigestStory(story.id),
-                              "Delete this story? It stays off the site, and a later digest will not bring this URL back for this date."
-                            )
-                          }
-                          className="field-button min-h-11 rounded border border-red-700 bg-white px-3 text-sm font-medium text-red-700 disabled:opacity-60"
-                        >
-                          {deleting ? "Deleting..." : "Delete"}
-                        </button>
-                      </div>
-                    ) : (
-                      <p className="mt-3 text-sm text-[#3a3a3a]">
-                        Published.
-                        {story.postId ? (
-                          <>
-                            {" "}
-                            <Link
-                              href={`/item/${story.postId}`}
-                              className="text-[#3f679b] hover:underline"
-                            >
-                              View post
-                            </Link>
-                          </>
-                        ) : null}
-                      </p>
-                    )}
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <label
+                        htmlFor={`politics-${story.id}`}
+                        className="flex min-h-11 items-center gap-2 text-sm text-[#1a1a1a]"
+                      >
+                        <input
+                          id={`politics-${story.id}`}
+                          type="checkbox"
+                          checked={checked}
+                          disabled={busy || !politicsReady}
+                          onChange={(event) => onPolitics(story.id, event.target.checked)}
+                          className="h-4 w-4 accent-[#3f679b]"
+                        />
+                        Politics
+                      </label>
+                      {story.status === "pending" ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busy || !botReady}
+                            onClick={() =>
+                              run(story.id, "publish", () => publishDigestStory(story.id))
+                            }
+                            className="field-button min-h-11 rounded bg-[#3f679b] px-3 text-sm font-medium text-white hover:bg-[#345580] disabled:opacity-60"
+                          >
+                            {publishing ? "Publishing..." : "Publish"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              run(
+                                story.id,
+                                "delete",
+                                () => deleteDigestStory(story.id),
+                                "Delete this story? It stays off the site, and a later digest will not bring this URL back for this date."
+                              )
+                            }
+                            className="field-button min-h-11 rounded border border-red-700 bg-white px-3 text-sm font-medium text-red-700 disabled:opacity-60"
+                          >
+                            {deleting ? "Deleting..." : "Delete"}
+                          </button>
+                        </>
+                      ) : (
+                        <p className="text-sm text-[#3a3a3a]">
+                          Published.
+                          {story.postId ? (
+                            <>
+                              {" "}
+                              <Link
+                                href={`/item/${story.postId}`}
+                                className="text-[#3f679b] hover:underline"
+                              >
+                                View post
+                              </Link>
+                            </>
+                          ) : null}
+                        </p>
+                      )}
+                    </div>
                   </li>
                 );
               })}

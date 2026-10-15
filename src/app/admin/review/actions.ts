@@ -1,7 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { DIGEST_MIGRATION_HINT, DIGEST_PUBLISH_ONE_HINT, missingDigestSchema } from "@/lib/digest";
+import {
+  DIGEST_MIGRATION_HINT,
+  DIGEST_POLITICS_HINT,
+  DIGEST_PUBLISH_ONE_HINT,
+  missingDigestSchema,
+  parseDigestDate,
+} from "@/lib/digest";
 import { createClient } from "@/lib/supabase/server";
 
 export type DigestActionResult =
@@ -40,6 +46,12 @@ function actionError(error: { message: string; code?: string }): string {
   }
   if (error.message.startsWith("digest:")) {
     return error.message.slice("digest:".length).trim();
+  }
+  if (/set_digest_story_politics|delete_pending_digest_stories/i.test(error.message)) {
+    return DIGEST_POLITICS_HINT;
+  }
+  if (/is_political/i.test(error.message) && missingDigestSchema(error.message)) {
+    return DIGEST_POLITICS_HINT;
   }
   if (/publish_digest_story/i.test(error.message)) return DIGEST_PUBLISH_ONE_HINT;
   if (missingDigestSchema(error.message)) return DIGEST_MIGRATION_HINT;
@@ -106,4 +118,70 @@ export async function publishDigestStory(id: string): Promise<DigestActionResult
   revalidateDigest(true);
   revalidatePath(`/item/${postId}`);
   return { ok: true, message: "Published.", postId };
+}
+
+export async function setDigestStoryPolitics(
+  id: string,
+  isPolitical: boolean
+): Promise<DigestActionResult> {
+  if (!STORY_ID.test(id) || typeof isPolitical !== "boolean") {
+    return { ok: false, error: "That story could not be found." };
+  }
+
+  const { supabase, error } = await adminClient();
+  if (error || !supabase) {
+    return { ok: false, error: error ?? "You need an admin account to do that." };
+  }
+
+  const { data, error: saveError } = await supabase.rpc("set_digest_story_politics", {
+    p_id: id,
+    p_is_political: isPolitical,
+  });
+
+  if (saveError) {
+    console.error("Could not save a digest politics flag:", saveError.message);
+    return { ok: false, error: actionError(saveError) };
+  }
+
+  const postId = data == null ? null : Number(data);
+  if (postId != null && (!Number.isInteger(postId) || postId <= 0)) {
+    return { ok: false, error: "That story could not be saved." };
+  }
+
+  revalidateDigest(postId != null);
+  if (postId != null) revalidatePath(`/item/${postId}`);
+  return {
+    ok: true,
+    message: postId != null ? "Updated the post." : "Saved.",
+    postId: postId ?? undefined,
+  };
+}
+
+export async function deletePendingDigestStories(date: string): Promise<DigestActionResult> {
+  const digestDate = parseDigestDate(date);
+  if (!digestDate) return { ok: false, error: "Choose a digest date." };
+
+  const { supabase, error } = await adminClient();
+  if (error || !supabase) {
+    return { ok: false, error: error ?? "You need an admin account to do that." };
+  }
+
+  const { data, error: deleteError } = await supabase.rpc("delete_pending_digest_stories", {
+    p_digest_date: digestDate,
+  });
+
+  if (deleteError) {
+    console.error("Could not hide waiting digest stories:", deleteError.message);
+    return { ok: false, error: actionError(deleteError) };
+  }
+
+  const count = Number(data);
+  if (!Number.isInteger(count) || count < 0) {
+    return { ok: false, error: "Those stories could not be deleted." };
+  }
+
+  revalidateDigest(false);
+  if (count === 0) return { ok: true, message: "Nothing was still waiting." };
+  if (count === 1) return { ok: true, message: "Deleted 1 story. It stays off the site." };
+  return { ok: true, message: `Deleted ${count} stories. They stay off the site.` };
 }

@@ -2,7 +2,9 @@ import "server-only";
 import {
   DIGEST_BOT_USERNAME,
   DIGEST_MIGRATION_HINT,
+  DIGEST_POLITICS_HINT,
   DIGEST_SECTIONS,
+  missingDigestPoliticsColumn,
   digestPostBody,
   formatDigestDate,
   isDigestSection,
@@ -24,6 +26,7 @@ export type DigestReviewStory = {
   body: string;
   status: "pending" | "published";
   postId: number | null;
+  isPolitical: boolean;
 };
 
 export type DigestReviewGroup = {
@@ -44,6 +47,7 @@ export type DigestReview = {
   groups: DigestReviewGroup[];
   pendingCount: number;
   moreWaiting: number;
+  politicsReady: boolean;
   botReady: boolean;
   botIsAdmin: boolean;
   loadError: string | null;
@@ -65,6 +69,7 @@ type StoryRow = {
   synopsis: string;
   status: string;
   post_id: number | string | null;
+  is_political?: boolean | null;
 };
 
 const emptyReview: DigestReview = {
@@ -74,6 +79,7 @@ const emptyReview: DigestReview = {
   groups: [],
   pendingCount: 0,
   moreWaiting: 0,
+  politicsReady: true,
   botReady: false,
   botIsAdmin: false,
   loadError: null,
@@ -177,6 +183,7 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
       groups: [],
       pendingCount: 0,
       moreWaiting: 0,
+      politicsReady: true,
       // A failed profile lookup should not pretend the author is missing.
       botReady: Boolean(botResult.error) || Boolean(bot?.id),
       botIsAdmin: Boolean(bot?.is_admin),
@@ -185,9 +192,10 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
 
     if (!selectedDate) return review;
 
-    const { data, error } = await supabase
+    let politicsReady = true;
+    const first = await supabase
       .from("digest_stories")
-      .select("id, section, headline, url, paper, state, synopsis, status, post_id")
+      .select("id, section, headline, url, paper, state, synopsis, status, post_id, is_political")
       .eq("digest_date", selectedDate)
       .in("status", ["pending", "published"])
       .order("status", { ascending: true })
@@ -195,18 +203,43 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
       .order("id", { ascending: true })
       .limit(800);
 
+    let error = first.error;
+    let data = (first.data ?? null) as StoryRow[] | null;
+
+    if (error && missingDigestPoliticsColumn(error.message)) {
+      politicsReady = false;
+      const retry = await supabase
+        .from("digest_stories")
+        .select("id, section, headline, url, paper, state, synopsis, status, post_id")
+        .eq("digest_date", selectedDate)
+        .in("status", ["pending", "published"])
+        .order("status", { ascending: true })
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .limit(800);
+      error = retry.error;
+      data = (retry.data ?? null) as StoryRow[] | null;
+    }
+
     if (error) {
       console.error("Error loading digest stories:", error.message);
       return {
         ...review,
-        loadError: missingDigestSchema(error.message) ? DIGEST_MIGRATION_HINT : error.message,
+        politicsReady,
+        loadError: missingDigestPoliticsColumn(error.message)
+          ? DIGEST_POLITICS_HINT
+          : missingDigestSchema(error.message)
+            ? DIGEST_MIGRATION_HINT
+            : error.message,
       };
     }
+
+    review.politicsReady = politicsReady;
 
     const buckets = new Map<string, DigestReviewStory[]>();
     for (const section of DIGEST_SECTIONS) buckets.set(section, []);
 
-    for (const row of (data ?? []) as StoryRow[]) {
+    for (const row of data ?? []) {
       if (row.status !== "pending" && row.status !== "published") continue;
       const postId = row.post_id == null ? null : Number(row.post_id);
       const story: DigestReviewStory = {
@@ -216,6 +249,7 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
         body: digestPostBody(row.synopsis, row.paper, row.state),
         status: row.status,
         postId: postId != null && Number.isInteger(postId) && postId > 0 ? postId : null,
+        isPolitical: politicsReady && row.is_political === true,
       };
       const key = isDigestSection(row.section) ? row.section : row.section;
       const list = buckets.get(key) ?? [];

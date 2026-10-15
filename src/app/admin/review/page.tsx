@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import DigestReview from "@/components/DigestReview";
-import { DIGEST_BOT_SETUP } from "@/lib/digest";
+import { DIGEST_BOT_SETUP, DIGEST_POLITICS_HINT } from "@/lib/digest";
 import { getDigestReview } from "@/lib/digest-review";
 import { pageMeta } from "@/lib/seo";
 
@@ -27,8 +27,10 @@ export default async function AdminDigestReviewPage({
       <h1 className="mb-2 text-2xl font-bold">Review digest</h1>
       <p className="mb-3 text-[15px] leading-relaxed text-[#666]">
         Stories from the daily Midwest digest wait here. Nothing is posted until you
-        publish it. Delete removes a story from this date, and a later send of that
-        same link will not put it back.
+        publish it. Politics tags that one post, and stays off unless you turn it on.
+        Delete removes a story from this date. Delete all removes every story still
+        waiting for the date you are viewing. A later send of a deleted link will
+        not put it back.
       </p>
       <p className="mb-6 text-sm">
         <Link href="/admin" className="text-[#3f679b] hover:underline">
@@ -91,12 +93,20 @@ export default async function AdminDigestReviewPage({
         </form>
       ) : null}
 
+      {!review.loadError && review.selectedDate && !review.politicsReady ? (
+        <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-sm text-[#1a1a1a]">
+          {DIGEST_POLITICS_HINT}
+        </p>
+      ) : null}
+
       {!review.loadError && review.selectedDate && review.selectedLabel ? (
         <DigestReview
+          digestDate={review.selectedDate}
           dateLabel={review.selectedLabel}
           groups={review.groups}
           pendingCount={review.pendingCount}
           moreWaiting={review.moreWaiting}
+          politicsReady={review.politicsReady}
           botReady={review.botReady}
         />
       ) : null}
