@@ -22,7 +22,12 @@ export const DIGEST_PUBLISH_ONE_HINT =
   "Publishing one story needs a database update. In Supabase, open the SQL editor and run supabase/migrations/20261014_publish_one_digest_story.sql.";
 
 export const DIGEST_POLITICS_HINT =
-  "Politics tags and Delete all need a database update. In Supabase, open the SQL editor and run supabase/migrations/20261015_digest_story_politics.sql.";
+  "Politics tags and Finished need a database update. In Supabase, open the SQL editor and run supabase/migrations/20261015_digest_story_politics.sql.";
+
+/** How many Chicago calendar days the review date picker offers, including today. */
+export const DIGEST_REVIEW_DAYS = 7;
+
+export const DIGEST_REVIEW_TIMEZONE = "America/Chicago";
 
 export const DIGEST_BOT_SETUP =
   "Published stories are written by a profile named Cornhole News. Create that user before publishing. The steps are at the top of supabase/migrations/20261013_digest_stories.sql.";
@@ -80,6 +85,40 @@ export function formatDigestDate(isoDate: string): string {
     day: "numeric",
     year: "numeric",
   }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+export function digestCalendarDate(
+  now: Date,
+  timeZone = DIGEST_REVIEW_TIMEZONE
+): string | null {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  if (!year || !month || !day) return null;
+  return parseDigestDate(`${year}-${month}-${day}`);
+}
+
+/** Today and the previous six days in America/Chicago, newest first. */
+export function recentDigestWindow(now = new Date()): string[] {
+  const today = digestCalendarDate(now);
+  if (!today) return [];
+  const [year, month, day] = today.split("-").map(Number);
+  const dates: string[] = [];
+  for (let offset = 0; offset < DIGEST_REVIEW_DAYS; offset += 1) {
+    const date = new Date(Date.UTC(year, month - 1, day - offset));
+    dates.push(date.toISOString().slice(0, 10));
+  }
+  return dates;
+}
+
+export function isRecentDigestDate(isoDate: string, now = new Date()): boolean {
+  return recentDigestWindow(now).includes(isoDate);
 }
 
 export function isDigestSection(value: string): value is DigestSection {

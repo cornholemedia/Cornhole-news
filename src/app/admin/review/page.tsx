@@ -28,9 +28,10 @@ export default async function AdminDigestReviewPage({
       <p className="mb-3 text-[15px] leading-relaxed text-[#666]">
         Stories from the daily Midwest digest wait here. Nothing is posted until you
         publish it. Politics tags that one post, and stays off unless you turn it on.
-        Delete removes a story from this date. Delete all removes every story still
-        waiting for the date you are viewing. A later send of a deleted link will
-        not put it back.
+        Delete removes one story. Finished removes every story still waiting for the
+        date you are viewing and leaves published stories up. The date list is the
+        last 7 days in Chicago time. A later send of a deleted link will not put it
+        back.
       </p>
       <p className="mb-6 text-sm">
         <Link href="/admin" className="text-[#3f679b] hover:underline">
@@ -60,37 +61,9 @@ export default async function AdminDigestReviewPage({
 
       {!review.loadError && review.dates.length === 0 ? (
         <p className="rounded border border-[#e0e0e0] bg-white p-4 text-sm text-[#3a3a3a]">
-          No digest has arrived yet. Stories show up here after the daily job sends them.
-          They stay hidden until you publish.
+          No digest from the last 7 days is here yet. Stories show up here after the
+          daily job sends them. They stay hidden until you publish.
         </p>
-      ) : null}
-
-      {!review.loadError && review.dates.length > 0 ? (
-        <form action="/admin/review" method="get" className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div className="sm:min-w-80">
-            <label htmlFor="digest-date" className="field-label">
-              Digest date
-            </label>
-            <select
-              id="digest-date"
-              name="date"
-              defaultValue={review.selectedDate ?? undefined}
-              className="field-input"
-            >
-              {review.dates.map((option) => (
-                <option key={option.date} value={option.date}>
-                  {option.label} ({option.pendingCount} waiting)
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            type="submit"
-            className="field-button min-h-11 rounded border border-[#3f679b] bg-white px-3 text-sm font-medium text-[#3f679b]"
-          >
-            Show this date
-          </button>
-        </form>
       ) : null}
 
       {!review.loadError && review.selectedDate && !review.politicsReady ? (
@@ -101,6 +74,7 @@ export default async function AdminDigestReviewPage({
 
       {!review.loadError && review.selectedDate && review.selectedLabel ? (
         <DigestReview
+          dates={review.dates}
           digestDate={review.selectedDate}
           dateLabel={review.selectedLabel}
           groups={review.groups}

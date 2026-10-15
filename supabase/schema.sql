@@ -529,6 +529,6 @@ on conflict (slug) do nothing;
 -- than once. The digest queue is 20261013_digest_stories.sql. Run it after
 -- 20261012_politics_tag.sql, then run 20261014_publish_one_digest_story.sql
 -- so each story can be published on its own, then
--- 20261015_digest_story_politics.sql for the Politics checkbox and Delete all.
+-- 20261015_digest_story_politics.sql for the Politics checkbox and Finished.
 -- Publishing uses a Cornhole News profile; the steps to create that profile
 -- are at the top of the digest file.

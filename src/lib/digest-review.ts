@@ -8,6 +8,7 @@ import {
   digestPostBody,
   formatDigestDate,
   isDigestSection,
+  isRecentDigestDate,
   missingDigestSchema,
   parseDigestDate,
 } from "@/lib/digest";
@@ -158,14 +159,10 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
       console.error("Error loading the digest author:", botResult.error.message);
     }
 
-    const dates = ((datesResult.data ?? []) as DateRow[]).map((row) =>
-      choice(String(row.digest_date).slice(0, 10), Number(row.pending_count) || 0)
-    );
-
-    if (requested && !dates.some((row) => row.date === requested)) {
-      dates.push(choice(requested, 0));
-      dates.sort((a, b) => b.date.localeCompare(a.date));
-    }
+    const now = new Date();
+    const dates = ((datesResult.data ?? []) as DateRow[])
+      .map((row) => choice(String(row.digest_date).slice(0, 10), Number(row.pending_count) || 0))
+      .filter((row) => isRecentDigestDate(row.date, now));
 
     const selectedDate =
       (requested && dates.some((row) => row.date === requested) ? requested : null) ??

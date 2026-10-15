@@ -26,12 +26,19 @@ type ReviewGroup = {
   stories: ReviewStory[];
 };
 
+type DateChoice = {
+  date: string;
+  label: string;
+  pendingCount: number;
+};
+
 type PendingAction = {
   id: string;
-  action: "publish" | "delete" | "delete-all" | "politics";
+  action: "publish" | "delete" | "finish" | "politics";
 };
 
 export default function DigestReview({
+  dates,
   digestDate,
   dateLabel,
   groups,
@@ -40,6 +47,7 @@ export default function DigestReview({
   politicsReady,
   botReady,
 }: {
+  dates: DateChoice[];
   digestDate: string;
   dateLabel: string;
   groups: ReviewGroup[];
@@ -146,10 +154,50 @@ export default function DigestReview({
 
   const busy = pending !== null;
   const waiting = pendingCount + moreWaiting;
-  const deletingAll = pending?.action === "delete-all";
+  const finishing = pending?.action === "finish";
 
   return (
     <section aria-labelledby="digest-review-heading">
+      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="sm:min-w-80">
+          <label htmlFor="digest-date" className="field-label">
+            Digest date
+          </label>
+          <select
+            id="digest-date"
+            value={digestDate}
+            disabled={busy}
+            onChange={(event) => {
+              const next = event.target.value;
+              if (next && next !== digestDate) router.push(`/admin/review?date=${next}`);
+            }}
+            className="field-input"
+          >
+            {dates.map((option) => (
+              <option key={option.date} value={option.date}>
+                {option.label} ({option.pendingCount} waiting)
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="button"
+          disabled={busy}
+          aria-label={`Mark ${dateLabel} finished`}
+          onClick={() =>
+            run(
+              digestDate,
+              "finish",
+              () => deletePendingDigestStories(digestDate),
+              `Mark ${dateLabel} finished? Every story still waiting for this date will be deleted. Published stories stay on the site. A later digest will not bring these links back for this date.`
+            )
+          }
+          className="field-button min-h-11 rounded border border-red-700 bg-white px-3 text-sm font-medium text-red-700 disabled:opacity-60"
+        >
+          {finishing ? "Finishing..." : "Finished"}
+        </button>
+      </div>
+
       <div className="rounded border border-[#e0e0e0] bg-white p-4">
         <h2 id="digest-review-heading" className="font-semibold">
           {dateLabel}
@@ -160,7 +208,7 @@ export default function DigestReview({
             : `${waiting} ${waiting === 1 ? "story is" : "stories are"} still hidden. Publish posts that one story as Cornhole News. Politics is off until you turn it on.`}
           {moreWaiting > 0 ? (
             <span className="mt-1 block">
-              {moreWaiting} of those {moreWaiting === 1 ? "is" : "are"} beyond this list. Delete all still includes them.
+              {moreWaiting} of those {moreWaiting === 1 ? "is" : "are"} beyond this list. Finished still includes them.
             </span>
           ) : null}
         </p>
@@ -182,27 +230,6 @@ export default function DigestReview({
           <p role="alert" className="mt-4 text-sm text-red-700">
             {error}
           </p>
-        ) : null}
-
-        {waiting > 0 ? (
-          <div className="mt-4">
-            <button
-              type="button"
-              disabled={busy}
-              aria-label={`Delete all waiting stories for ${dateLabel}`}
-              onClick={() =>
-                run(
-                  digestDate,
-                  "delete-all",
-                  () => deletePendingDigestStories(digestDate),
-                  `Delete every story still waiting for ${dateLabel}? Published stories stay on the site. A later digest will not bring these links back for this date.`
-                )
-              }
-              className="field-button min-h-11 rounded border border-red-700 bg-white px-3 text-sm font-medium text-red-700 disabled:opacity-60"
-            >
-              {deletingAll ? "Deleting..." : "Delete all"}
-            </button>
-          </div>
         ) : null}
       </div>
 
