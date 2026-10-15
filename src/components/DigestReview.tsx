@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   deleteDigestStory,
   deletePendingDigestStories,
@@ -52,11 +52,13 @@ export default function DigestReview({
   const busyRef = useRef(false);
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [flags, setFlags] = useState<Record<string, boolean>>({});
+  const [flagSource, setFlagSource] = useState(groups);
   const [message, setMessage] = useState<string | null>(null);
   const [postId, setPostId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  if (flagSource !== groups) {
+    setFlagSource(groups);
     setFlags((current) => {
       const known = new Map(
         groups.flatMap((group) => group.stories.map((story) => [story.id, story.isPolitical] as const))
@@ -71,7 +73,7 @@ export default function DigestReview({
       }
       return changed ? next : current;
     });
-  }, [groups]);
+  }
 
   async function run(
     id: string,
