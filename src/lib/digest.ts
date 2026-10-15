@@ -21,6 +21,9 @@ export const DIGEST_MIGRATION_HINT =
 export const DIGEST_PUBLISH_ONE_HINT =
   "Publishing one story needs a database update. In Supabase, open the SQL editor and run supabase/migrations/20261014_publish_one_digest_story.sql.";
 
+export const DIGEST_POLITICS_HINT =
+  "Politics tags and Delete all need a database update. In Supabase, open the SQL editor and run supabase/migrations/20261015_digest_story_politics.sql.";
+
 export const DIGEST_BOT_SETUP =
   "Published stories are written by a profile named Cornhole News. Create that user before publishing. The steps are at the top of supabase/migrations/20261013_digest_stories.sql.";
 
@@ -247,6 +250,10 @@ export function bearerMatches(header: string | null, secret: string): boolean {
   }
 
   return timingSafeEqual(providedBuf, secretBuf);
+}
+
+export function missingDigestPoliticsColumn(message: string): boolean {
+  return /is_political/i.test(message) && /column|schema cache|does not exist/i.test(message);
 }
 
 export function missingDigestSchema(message: string): boolean {

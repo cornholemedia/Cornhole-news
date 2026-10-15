@@ -163,3 +163,62 @@ test("publishing one digest story locks the row and will not insert a second pos
   assert.equal(reviewUi.includes("Publish all"), false);
   assert.match(reviewUi, /Publishing\.\.\./);
 });
+
+test("a digest politics flag is stored, copied onto the post, and delete all skips published rows", () => {
+  const politics = readFileSync(
+    new URL("../../supabase/migrations/20261015_digest_story_politics.sql", import.meta.url),
+    "utf8"
+  );
+  const reviewUi = readFileSync(new URL("../components/DigestReview.tsx", import.meta.url), "utf8");
+  const actions = readFileSync(new URL("../app/admin/review/actions.ts", import.meta.url), "utf8");
+  const ingestUpdate = migration.slice(
+    migration.indexOf("update public.digest_stories as d"),
+    migration.indexOf("get diagnostics updated_count")
+  );
+
+  assert.match(politics, /add column if not exists is_political boolean not null default false/);
+  assert.match(politics, /story\.is_political/);
+  assert.equal(/bot_id,\s*\n\s*false/.test(politics), false);
+  const publishInsert = politics.indexOf("insert into public.posts (title, url, body, author_id, is_political)");
+  const politicsFn = politics.indexOf("function public.set_digest_story_politics");
+  assert.ok(publishInsert > 0);
+  assert.ok(politicsFn > publishInsert);
+  assert.match(politics.slice(publishInsert, politicsFn), /story\.is_political/);
+  assert.match(politics, /update public\.posts\s+set is_political = p_is_political/);
+  assert.match(politics, /pg_advisory_xact_lock\(845114, hashtext\(p_id::text\)\)/);
+  assert.match(
+    politics,
+    /grant execute on function public\.set_digest_story_politics\(uuid, boolean\) to authenticated/
+  );
+  assert.equal(
+    /grant execute on function public\.set_digest_story_politics\(uuid, boolean\) to (anon|service_role)/.test(
+      politics
+    ),
+    false
+  );
+
+  const deleteFn = politics.slice(politics.indexOf("function public.delete_pending_digest_stories"));
+  assert.match(deleteFn, /set status = 'deleted'/);
+  assert.match(deleteFn, /and status = 'pending'/);
+  assert.equal(/status = 'published'/.test(deleteFn), false);
+  assert.match(
+    deleteFn,
+    /grant execute on function public\.delete_pending_digest_stories\(date\) to authenticated/
+  );
+  assert.equal(
+    /grant execute on function public\.delete_pending_digest_stories\(date\) to (anon|service_role)/.test(
+      deleteFn
+    ),
+    false
+  );
+
+  assert.equal(/is_political/.test(ingestUpdate), false);
+
+  assert.match(actions, /set_digest_story_politics/);
+  assert.match(actions, /delete_pending_digest_stories/);
+  assert.match(reviewUi, /type="checkbox"/);
+  assert.match(reviewUi, /Politics/);
+  assert.match(reviewUi, /Delete all/);
+  assert.match(reviewUi, /window\.confirm/);
+  assert.match(reviewUi, /Published stories stay on the site/);
+});
