@@ -1,12 +1,13 @@
 import { isIP } from "node:net";
 import { timingSafeEqual } from "node:crypto";
 
-/** Keep these limits aligned with supabase/migrations/20261013_digest_stories.sql. */
+/** Keep these limits aligned with the digest migrations, including 20261016. */
 export const DIGEST_SECTIONS = [
   "QUIRKY",
   "SERIOUS",
   "AROUND THE MIDWEST",
   "NATIONAL PRESS",
+  "TRADE & INDUSTRY",
 ] as const;
 
 export type DigestSection = (typeof DIGEST_SECTIONS)[number];
