@@ -42,6 +42,7 @@ test("a digest story becomes a non-political post body with paper and state", ()
     "SERIOUS",
     "AROUND THE MIDWEST",
     "NATIONAL PRESS",
+    "TRADE & INDUSTRY",
   ]);
 });
 
@@ -52,6 +53,13 @@ test("ingest payload accepts one date of stories and rejects bad rows", () => {
   assert.equal(good.value.digestDate, "2026-10-13");
   assert.equal(good.value.stories[0]?.state, "IA");
   assert.equal(good.value.stories[0]?.section, "QUIRKY");
+  assert.equal(
+    parseIngestPayload({
+      digest_date: "2026-10-13",
+      stories: [{ ...story, section: "TRADE & INDUSTRY", url: "https://example.com/bags" }],
+    }).ok,
+    true
+  );
 
   assert.equal(parseDigestDate("2026-02-31"), null);
   assert.equal(parseIngestPayload({ digest_date: "10/13/2026", stories: [] }).ok, false);
@@ -226,6 +234,29 @@ test("a digest politics flag is stored, copied onto the post, and delete all ski
   assert.match(reviewUi, /window\.confirm/);
   assert.match(reviewUi, /Published stories stay on the site/);
   assert.match(actions, /delete_pending_digest_stories/);
+});
+
+test("TRADE & INDUSTRY is allowed after NATIONAL PRESS", () => {
+  const trade = readFileSync(
+    new URL("../../supabase/migrations/20261016_digest_trade_industry.sql", import.meta.url),
+    "utf8"
+  );
+  const sections = "'QUIRKY', 'SERIOUS', 'AROUND THE MIDWEST', 'NATIONAL PRESS', 'TRADE & INDUSTRY'";
+  assert.equal(DIGEST_SECTIONS.at(-2), "NATIONAL PRESS");
+  assert.equal(DIGEST_SECTIONS.at(-1), "TRADE & INDUSTRY");
+  assert.match(trade, /drop constraint if exists digest_stories_section_check/);
+  assert.match(trade, new RegExp(`section in \\(${sections.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)`));
+  assert.match(trade, new RegExp(`not in \\(${sections.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)`));
+  assert.match(
+    trade,
+    /grant execute on function public\.ingest_digest_stories\(date, jsonb\) to service_role/
+  );
+  assert.equal(
+    /grant execute on function public\.ingest_digest_stories\(date, jsonb\) to (anon|authenticated)/.test(
+      trade
+    ),
+    false
+  );
 });
 
 test("the review date list is the last 7 Chicago days", () => {
