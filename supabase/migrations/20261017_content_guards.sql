@@ -38,10 +38,6 @@ where url is not null
   );
 
 update public.posts
-set body = replace(body, chr(0), '')
-where body is not null and strpos(body, chr(0)) > 0;
-
-update public.posts
 set body = left(body, 10000)
 where body is not null and char_length(body) > 10000;
 
@@ -64,10 +60,7 @@ alter table public.posts drop constraint if exists posts_body_length_check;
 alter table public.posts
   add constraint posts_body_length_check check (
     body is null
-    or (
-      char_length(body) between 1 and 10000
-      and strpos(body, chr(0)) = 0
-    )
+    or char_length(body) between 1 and 10000
   );
 
 create index if not exists posts_author_created_idx

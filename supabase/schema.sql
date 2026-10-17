@@ -160,10 +160,7 @@ create table if not exists public.posts (
   ),
   body text check (
     body is null
-    or (
-      char_length(body) between 1 and 10000
-      and strpos(body, chr(0)) = 0
-    )
+    or char_length(body) between 1 and 10000
   ),
   author_id uuid not null references public.profiles(id) on delete cascade,
   created_at timestamptz not null default now(),
