@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { usePathname } from "next/navigation";
 import HoneypotField from "@/components/HoneypotField";
+import TurnstileField from "@/components/TurnstileField";
 import { subscribeToNewsletter } from "@/app/newsletter/actions";
 import type { FormStatus } from "@/lib/form-fields";
 
@@ -60,6 +61,8 @@ export default function NewsletterSignup() {
               {pending ? "Subscribing..." : "Subscribe"}
             </button>
           </div>
+
+          <TurnstileField resetKey={state.error ?? ""} />
 
           {state.error ? (
             <p

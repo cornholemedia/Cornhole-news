@@ -1,34 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import PasswordInput from "@/components/PasswordInput";
-import { createClient } from "@/lib/supabase/client";
+import TurnstileField from "@/components/TurnstileField";
+import { signInAccount } from "@/app/login/actions";
 import { safeNextPath } from "@/lib/safe-next";
 
 export default function LoginPage() {
-  const supabase = createClient();
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-sm text-sm text-[#666]">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = safeNextPath(searchParams.get("next"));
+  const confirmError = searchParams.get("error") === "confirm";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    confirmError ? "That confirmation link is invalid or has expired. Log in if you already confirmed, or sign up again." : null
+  );
   const [loading, setLoading] = useState(false);
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
+    const result = await signInAccount(new FormData(e.currentTarget));
     setLoading(false);
-    if (error) {
-      setError(error.message);
+    if (!result.ok) {
+      setError(result.error);
+      setTurnstileKey((key) => key + 1);
       return;
     }
-    const next = new URLSearchParams(window.location.search).get("next");
-    router.push(safeNextPath(next));
+
+    router.push(result.next);
     router.refresh();
   }
 
@@ -36,12 +50,14 @@ export default function LoginPage() {
     <div className="mx-auto max-w-sm">
       <h1 className="mb-4 text-2xl font-bold">Log in</h1>
       <form onSubmit={handleSubmit} className="space-y-3">
+        <input type="hidden" name="next" value={nextPath} />
         <div>
           <label htmlFor="login-email" className="field-label">
             Email
           </label>
           <input
             id="login-email"
+            name="email"
             type="email"
             required
             autoComplete="email"
@@ -56,6 +72,7 @@ export default function LoginPage() {
           </label>
           <PasswordInput
             id="login-password"
+            name="password"
             required
             autoComplete="current-password"
             value={password}
@@ -74,6 +91,8 @@ export default function LoginPage() {
             </Link>
           </div>
         </div>
+
+        <TurnstileField resetKey={String(turnstileKey)} />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

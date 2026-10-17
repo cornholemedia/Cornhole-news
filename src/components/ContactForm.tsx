@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import HoneypotField from "@/components/HoneypotField";
+import TurnstileField from "@/components/TurnstileField";
 import { submitContact } from "@/app/contact/actions";
 import type { FormStatus } from "@/lib/form-fields";
 
@@ -80,6 +81,8 @@ export default function ContactForm() {
               className="field-input"
             />
           </div>
+
+          <TurnstileField resetKey={state.error ?? ""} />
 
           {state.error ? (
             <p role="alert" className="rounded border border-red-700 bg-white p-3 text-sm text-red-700">

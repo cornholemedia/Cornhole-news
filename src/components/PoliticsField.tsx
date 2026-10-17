@@ -1,15 +1,17 @@
 type PoliticsFieldProps = {
   id: string;
+  name?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
 };
 
-export default function PoliticsField({ id, checked, onChange }: PoliticsFieldProps) {
+export default function PoliticsField({ id, name, checked, onChange }: PoliticsFieldProps) {
   return (
     <div>
       <label htmlFor={id} className="flex items-start gap-2 text-sm leading-relaxed text-[#1a1a1a]">
         <input
           id={id}
+          name={name}
           type="checkbox"
           checked={checked}
           onChange={(event) => onChange(event.target.checked)}

@@ -3,7 +3,8 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import TurnstileField from "@/components/TurnstileField";
+import { requestPasswordReset } from "@/app/forgot-password/actions";
 
 export default function ForgotPasswordPage() {
   return (
@@ -14,34 +15,24 @@ export default function ForgotPasswordPage() {
 }
 
 function ForgotPasswordForm() {
-  const supabase = createClient();
   const searchParams = useSearchParams();
   const initialEmail = searchParams.get("email") ?? "";
   const [email, setEmail] = useState(initialEmail.length > 320 ? "" : initialEmail);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    // No query string: the reset email template appends ?token_hash= to this URL.
-    // The path must be on the Supabase redirect allow list. See the README.
-    const redirectTo = `${window.location.origin}/auth/callback`;
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo,
-    });
-
+    const result = await requestPasswordReset(new FormData(e.currentTarget));
     setLoading(false);
-    if (error) {
-      const message = error.message.toLowerCase();
-      if (message.includes("user not found") || message.includes("not registered")) {
-        setDone(true);
-        return;
-      }
-      setError(error.message);
+    if (!result.ok) {
+      setError(result.error);
+      setTurnstileKey((key) => key + 1);
       return;
     }
 
@@ -78,6 +69,7 @@ function ForgotPasswordForm() {
           </label>
           <input
             id="forgot-email"
+            name="email"
             type="email"
             required
             autoComplete="email"
@@ -86,6 +78,8 @@ function ForgotPasswordForm() {
             className="field-input"
           />
         </div>
+
+        <TurnstileField resetKey={String(turnstileKey)} />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

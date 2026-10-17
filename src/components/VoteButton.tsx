@@ -50,10 +50,20 @@ export default function VoteButton({ postId }: VoteButtonProps) {
 
     startTransition(async () => {
       if (voted) {
-        await supabase.from("votes").delete().eq("post_id", postId).eq("user_id", userId);
+        const { error } = await supabase.from("votes").delete().eq("post_id", postId).eq("user_id", userId);
+        if (error) {
+          window.alert(error.message);
+          return;
+        }
         setVoted(false);
       } else {
-        await supabase.from("votes").insert({ post_id: postId, user_id: userId });
+        const { error } = await supabase.from("votes").insert({ post_id: postId, user_id: userId });
+        if (error) {
+          window.alert(
+            /suspended/i.test(error.message) ? "This account is suspended." : error.message
+          );
+          return;
+        }
         setVoted(true);
       }
       router.refresh();

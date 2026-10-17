@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import HoneypotField from "@/components/HoneypotField";
+import TurnstileField from "@/components/TurnstileField";
 import { submitJobPosting } from "@/app/jobs/actions";
 import {
   EMPLOYMENT_TYPES,
@@ -320,6 +321,8 @@ export default function JobPostForm() {
           and confirm this job is real and located in the Midwest.
         </span>
       </label>
+
+      <TurnstileField resetKey={state.error ?? ""} />
 
       {state.error ? (
         <p role="alert" className="rounded border border-red-700 bg-white p-3 text-sm text-red-700">

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PoliticsField from "@/components/PoliticsField";
+import TurnstileField from "@/components/TurnstileField";
+import { submitPost } from "@/app/submit/actions";
 
 export default function SubmitPage() {
   const supabase = createClient();
@@ -16,6 +18,7 @@ export default function SubmitPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [generatingTitle, setGeneratingTitle] = useState(false);
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -55,7 +58,7 @@ export default function SubmitPage() {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
@@ -74,26 +77,16 @@ export default function SubmitPage() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("posts")
-      .insert({
-        title: title.trim(),
-        url: url.trim() || null,
-        body: body.trim() || null,
-        is_political: isPolitical,
-        author_id: user.id,
-      })
-      .select("id")
-      .single();
-
+    const result = await submitPost(new FormData(e.currentTarget));
     setLoading(false);
 
-    if (error) {
-      setError(error.message);
+    if (!result.ok) {
+      setError(result.error);
+      setTurnstileKey((key) => key + 1);
       return;
     }
 
-    router.push(`/item/${data.id}`);
+    router.push(`/item/${result.id}`);
     router.refresh();
   }
 
@@ -110,6 +103,7 @@ export default function SubmitPage() {
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
               id="submit-url"
+              name="url"
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -136,6 +130,7 @@ export default function SubmitPage() {
           </label>
           <input
             id="submit-title"
+            name="title"
             type="text"
             required
             maxLength={300}
@@ -151,6 +146,7 @@ export default function SubmitPage() {
           </label>
           <textarea
             id="submit-body"
+            name="body"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={5}
@@ -158,7 +154,14 @@ export default function SubmitPage() {
           />
         </div>
 
-        <PoliticsField id="submit-politics" checked={isPolitical} onChange={setIsPolitical} />
+        <PoliticsField
+          id="submit-politics"
+          name="isPolitical"
+          checked={isPolitical}
+          onChange={setIsPolitical}
+        />
+
+        <TurnstileField resetKey={String(turnstileKey)} />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

@@ -6,6 +6,7 @@ import { formatTimeAgo } from "@/lib/time";
 import Comments from "@/components/Comments";
 import AdminPostControls from "@/components/AdminPostControls";
 import PoliticsBadge from "@/components/PoliticsBadge";
+import { postLinkHost, safePostUrl } from "@/lib/post-fields";
 import { pageMeta, summarize } from "@/lib/seo";
 
 export const revalidate = 0;
@@ -53,14 +54,15 @@ export default async function ItemPage({
     notFound();
   }
 
-  const domain = post.url ? new URL(post.url).hostname.replace("www.", "") : null;
+  const href = safePostUrl(post.url);
+  const domain = postLinkHost(post.url);
 
   return (
     <div>
       <div className="mb-4">
         <div className="text-lg font-medium text-black">
-          {post.url ? (
-            <a href={post.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+          {href ? (
+            <a href={href} target="_blank" rel="noopener noreferrer" className="hover:underline">
               {post.title}
             </a>
           ) : (

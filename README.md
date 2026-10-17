@@ -28,6 +28,10 @@ voting, comments).
    - `supabase/migrations/20261014_publish_one_digest_story.sql`
    - `supabase/migrations/20261015_digest_story_politics.sql`
    - `supabase/migrations/20261016_digest_trade_industry.sql`
+   - `supabase/migrations/20261017_user_bans.sql`
+   - `supabase/migrations/20261017_content_guards.sql`
+   - `supabase/migrations/20261017_form_lockdown.sql`
+   - `supabase/migrations/20261017_privacy_newsletter.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -45,16 +49,27 @@ voting, comments).
    with `NEXT_PUBLIC_`.
    - `NEXT_PUBLIC_SUPABASE_URL` = your Supabase Project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = your Supabase anon public key.
-     The contact form and job board use this key. The digest ingest route
-     does not. It uses `SUPABASE_SERVICE_ROLE_KEY` below.
+     Signed-in reads and writes for posts, comments, and votes use this key.
+     Contact, newsletter, and job saves use `SUPABASE_SERVICE_ROLE_KEY` below.
+     The digest ingest route uses that key too.
    - `RESEND_API_KEY` = your Resend API key. This sends the form emails
      and the newsletter confirmation. If it is missing, the site still saves
      the form or signup and tells the visitor it was received. Nothing is
      emailed until the key is set.
-   - `CONTACT_FROM_EMAIL` = the From address. Leave it unset until the
-     domain is verified at Resend. Unset, the site uses
-     `Cornhole News <onboarding@resend.dev>`. After verification, set it to
-     `Cornhole News <noreply@cornholenews.news>` and redeploy.
+   - `CONTACT_FROM_EMAIL` = the From address on a domain you have verified
+     in Resend, for example `Cornhole News <noreply@cornholenews.news>`.
+     The site does not send mail until this is set. `onboarding@resend.dev`
+     is not used.
+   - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` = the
+     Cloudflare Turnstile site key and secret. Set both, then redeploy.
+     If either one is missing, the check is skipped and the forms still work.
+   - `SUPABASE_AUTH_CAPTCHA` = `true` only after you turn on Supabase's
+     CAPTCHA with the same Turnstile secret. Leave it unset until then.
+     Turnstile tokens can be checked only once, so the app verifies them
+     itself unless this is `true`.
+   - `NEWSLETTER_UNSUBSCRIBE_SECRET` = a random string, at least 16
+     characters. It signs unsubscribe links. If it is unset, the app signs
+     those links with `SUPABASE_SERVICE_ROLE_KEY` instead.
    - `SHOW_ADS` = `true` only when you want the dashed ad boxes to show.
      Leave it unset until real ads exist. Change it in Vercel, then redeploy.
    - `DIGEST_INGEST_SECRET` = a long random string, at least 16 characters.
@@ -62,8 +77,9 @@ voting, comments).
      The review page does not use this secret.
    - `SUPABASE_SERVICE_ROLE_KEY` = the service role key, or the newer secret
      key (`sb_secret_…`), from Supabase **Project Settings → API Keys**.
-     Only the digest ingest route uses it, and only on the server. Do not
-     create a `NEXT_PUBLIC_` copy. Redeploy after you set it.
+     The server uses it for the digest ingest, contact form, newsletter,
+     job board, rate limits, and unsubscribe. Do not create a `NEXT_PUBLIC_`
+     copy. Redeploy after you set it.
    - `NEXT_PUBLIC_SITE_URL` is optional. The site already uses
      `https://cornholenews.news`. Set this only if the public address changes.
 3. Click **Deploy**. Vercel builds the site in the cloud — nothing runs on
@@ -84,13 +100,14 @@ In the Supabase dashboard, open **Authentication → URL Configuration**:
 
 - **Site URL**: `https://cornholenews.news`
   (use `http://localhost:3000` only while testing on your own machine)
-- **Redirect URLs** — add every origin you use, with this exact path:
+- **Redirect URLs** — add the production callback, and localhost only while
+  you are testing on your own machine:
   - `https://cornholenews.news/auth/callback`
-  - `https://cornhole-news-5.vercel.app/auth/callback`
   - `http://localhost:3000/auth/callback`
 
 `https://www.cornholenews.news` redirects to `https://cornholenews.news`.
-The old `https://cornhole-news.vercel.app` address is no longer used.
+Do not add a `vercel.app` preview address. Password reset and signup
+confirmation always return to the site URL above.
 
 This app uses `@supabase/ssr`, which is the PKCE flow. Supabase's default
 reset email only finishes signing the user in when the link is opened in the
@@ -107,10 +124,24 @@ with `supabase/templates/recovery.html`:
 </p>
 ```
 
-`{{ .RedirectTo }}` is the `/auth/callback` URL from the forgot-password page.
+`{{ .RedirectTo }}` is `https://cornholenews.news/auth/callback`.
 The callback checks the token, then sends the user to `/reset-password` to
 choose a new password. Keep the redirect URL free of a query string — the
 template adds `?token_hash=`.
+
+Signup confirmation uses the same callback. Open **Authentication → Emails →
+Confirm signup** and replace the template with `supabase/templates/confirmation.html`:
+
+```html
+<h2>Confirm your email</h2>
+
+<p>Follow the link below to confirm your Cornhole News account. After that, you can log in.</p>
+<p>
+  <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup">Confirm your email</a>
+</p>
+```
+
+Leave **Confirm email** turned on before the public launch.
 
 After the new password is saved, the site signs every other device out and
 keeps the browser that just changed the password logged in.
@@ -236,6 +267,18 @@ accounts that are not admins.
    Run it after the one-story publish file. Existing stories stay untagged.
    `20261016_digest_trade_industry.sql` adds the TRADE & INDUSTRY section.
    Run it after the digest queue file. It does not change stories already saved.
+   Then run these, in this order, before the matching site deploy:
+   - `supabase/migrations/20261017_user_bans.sql`
+   - `supabase/migrations/20261017_content_guards.sql`
+   - `supabase/migrations/20261017_form_lockdown.sql`
+   - `supabase/migrations/20261017_privacy_newsletter.sql`
+   The first reserves username `Cornhole_Admin` and adds bans. The second
+   limits posts and comments and freezes `created_at`. The third stops
+   anonymous writes to the contact, newsletter, and job tables, and to the
+   old resume bucket. The fourth updates the saved privacy page where it
+   still says the site has no newsletter. Re-running `20260923_editable_pages.sql`
+   after the ban file removes the ban guard. Run `20261017_user_bans.sql` again
+   if you do that.
 2. Mark the account that should edit pages. In the SQL editor:
 
 ```sql
@@ -243,13 +286,15 @@ UPDATE profiles SET is_admin = true WHERE username = 'your_username';
 ```
 
 Replace `your_username` with the username they signed up with. The public API
-cannot change `is_admin`; use the SQL editor (this also re-applies it for
-`Cornhole_Admin` if that profile exists).
+cannot change `is_admin` or `is_banned`. Use the SQL editor. Do not sign up
+as `Cornhole_Admin`. That username is reserved and is not promoted automatically.
 3. Log in as that user. The header shows an **admin** link. Open `/admin`, edit a
    page, and save. The public page shows the saved title, subtitle, and body.
    A blank body keeps the built-in copy. Privacy and Terms ship as full drafts.
-   Have a lawyer review them, and replace the square-bracket items (`[STATE]`,
-   `[MAILING ADDRESS]`, and `[DESIGNATED AGENT NAME]`) before you rely on them.
+   Have a lawyer review them. Fill `[MAILING ADDRESS]`, `[STATE]`, and
+   `[DESIGNATED AGENT NAME]` in `src/lib/legal-placeholders.ts`, then redeploy.
+   Public pages substitute those three values. The admin editor still shows
+   the tokens until you replace them there too.
    The contact and jobs pages show that saved text above the forms.
 4. On the same admin screen, set the two inbox addresses, open **Review digest**
    for the daily Midwest queue, and review job postings.
