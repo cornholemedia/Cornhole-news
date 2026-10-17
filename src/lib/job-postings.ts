@@ -1,7 +1,6 @@
 import "server-only";
 import { sendSiteEmail } from "@/lib/email";
 import {
-  FORM_RATE_LIMIT_ERROR,
   FORM_SAVE_ERROR,
   HONEYPOT_FIELD,
   JOB_POSTING_LIMIT_PER_HOUR,
@@ -24,10 +23,13 @@ import {
   type PublicJobPosting,
   type WorkType,
 } from "@/lib/job-board";
-import { requestIpHash } from "@/lib/request-ip";
+import { recordIpAttempt } from "@/lib/rate-limit";
+import { requestClientIp, requestIpHash } from "@/lib/request-ip";
 import { JOBS_RECIPIENT_KEY, recipientEmail } from "@/lib/site-settings";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { TURNSTILE_FIELD, verifyTurnstileToken } from "@/lib/turnstile";
 
 const MIGRATION_HINT =
   "Job postings are not in the database yet. In Supabase, open the SQL editor and run supabase/migrations/20261009_job_postings.sql.";
@@ -355,21 +357,23 @@ export async function submitJobPostingForm(formData: FormData): Promise<FormStat
     return { ok: true };
   }
 
+  const human = await verifyTurnstileToken(
+    fieldValue(formData.get(TURNSTILE_FIELD)),
+    await requestClientIp()
+  );
+  if (!human.ok) return human;
+
   if (!isSupabaseConfigured()) return { ok: false, error: FORM_SAVE_ERROR };
 
-  const supabase = await createClient();
-  const ipHash = await requestIpHash();
-  if (ipHash) {
-    const { data, error } = await supabase.rpc("record_form_attempt", {
-      p_form: "job_posting",
-      p_ip_hash: ipHash,
-    });
-    if (error) {
-      console.warn("Could not record a job posting attempt:", error.message);
-      return { ok: false, error: FORM_SAVE_ERROR };
-    }
-    if (data !== true) return { ok: false, error: FORM_RATE_LIMIT_ERROR };
+  const supabase = createServiceClient();
+  if (!supabase) {
+    console.error("SUPABASE_SERVICE_ROLE_KEY is not set. The job posting was not saved.");
+    return { ok: false, error: FORM_SAVE_ERROR };
   }
+
+  const ipHash = await requestIpHash();
+  const allowed = await recordIpAttempt("job_posting", ipHash);
+  if (!allowed.ok) return allowed;
 
   const { value } = parsed;
   const to = await recipientEmail(JOBS_RECIPIENT_KEY);

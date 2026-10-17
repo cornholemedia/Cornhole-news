@@ -50,11 +50,8 @@ $$;
 revoke all on function public.protect_profile_admin_flag() from public, anon;
 grant execute on function public.protect_profile_admin_flag() to authenticated, service_role;
 
--- Promote the known admin before the guard trigger exists, so the first run
--- does not depend on there already being an admin JWT.
-update public.profiles
-set is_admin = true
-where username = 'Cornhole_Admin';
+-- Do not auto-promote username Cornhole_Admin. That name is reserved for the
+-- SQL editor in supabase/migrations/20261017_user_bans.sql.
 
 drop trigger if exists profiles_protect_admin_flag on public.profiles;
 create trigger profiles_protect_admin_flag

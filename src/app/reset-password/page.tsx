@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import PasswordInput from "@/components/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
+import { PASSWORD_MIN_LENGTH } from "@/lib/passwords";
 
 const LINK_ERRORS: Record<string, string> = {
   invalid_link: "This reset link is invalid or has expired. Request a new one and try again.",
@@ -63,6 +64,11 @@ function ResetPasswordForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setError(`Password must be at least ${PASSWORD_MIN_LENGTH} characters.`);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -140,7 +146,7 @@ function ResetPasswordForm() {
           <PasswordInput
             id="new-password"
             required
-            minLength={6}
+            minLength={PASSWORD_MIN_LENGTH}
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -153,7 +159,7 @@ function ResetPasswordForm() {
           <PasswordInput
             id="confirm-password"
             required
-            minLength={6}
+            minLength={PASSWORD_MIN_LENGTH}
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}

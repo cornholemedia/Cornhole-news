@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import TurnstileField from "@/components/TurnstileField";
+import { submitComment } from "@/app/comments/actions";
 import { formatTimeAgo } from "@/lib/time";
 
 type Comment = {
@@ -20,12 +22,31 @@ export default function Comments({ postId }: { postId: number }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [body, setBody] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUserId(user?.id ?? null));
+    let active = true;
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!active) return;
+      setUserId(user?.id ?? null);
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (active) setIsAdmin(Boolean(profile?.is_admin));
+    });
     loadComments();
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
 
@@ -53,7 +74,7 @@ export default function Comments({ postId }: { postId: number }) {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
@@ -64,19 +85,27 @@ export default function Comments({ postId }: { postId: number }) {
     if (!body.trim()) return;
 
     setLoading(true);
-    const { error } = await supabase.from("comments").insert({
-      post_id: postId,
-      author_id: userId,
-      body: body.trim(),
-    });
+    const result = await submitComment(new FormData(e.currentTarget));
     setLoading(false);
 
-    if (error) {
-      setError(error.message);
+    if (!result.ok) {
+      setError(result.error);
+      setTurnstileKey((key) => key + 1);
       return;
     }
 
     setBody("");
+    setTurnstileKey((key) => key + 1);
+    loadComments();
+  }
+
+  async function deleteComment(commentId: number) {
+    if (!window.confirm("Delete this comment permanently?")) return;
+    const { error: deleteError } = await supabase.from("comments").delete().eq("id", commentId);
+    if (deleteError) {
+      window.alert(deleteError.message);
+      return;
+    }
     loadComments();
   }
 
@@ -87,15 +116,19 @@ export default function Comments({ postId }: { postId: number }) {
       </h2>
 
       <form onSubmit={handleSubmit} className="mb-6">
+        <input type="hidden" name="postId" value={postId} />
         <textarea
+          name="body"
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder={userId ? "Add a comment..." : "Log in to comment"}
           aria-label={userId ? "Add a comment" : "Log in to comment"}
           disabled={!userId}
           rows={3}
+          maxLength={5000}
           className="field-input"
         />
+        {userId ? <div className="mt-2"><TurnstileField resetKey={String(turnstileKey)} /></div> : null}
         {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         <div className="mt-2">
           {userId ? (
@@ -124,6 +157,15 @@ export default function Comments({ postId }: { postId: number }) {
               {formatTimeAgo(c.created_at)}
             </div>
             <p className="mt-1 whitespace-pre-wrap text-[14px] text-black">{c.body}</p>
+            {userId && (isAdmin || userId === c.author_id) ? (
+              <button
+                type="button"
+                onClick={() => deleteComment(c.id)}
+                className="mt-1 text-[13px] text-[#666] hover:underline"
+              >
+                delete
+              </button>
+            ) : null}
           </div>
         ))}
       </div>

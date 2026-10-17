@@ -7,6 +7,7 @@ import {
 } from "@/lib/setting-keys";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export { CONTACT_RECIPIENT_KEY, DEFAULT_RECIPIENT_EMAIL, JOBS_RECIPIENT_KEY };
 
@@ -20,7 +21,14 @@ export type SettingKey = keyof typeof DEFAULTS;
 export async function recipientEmail(key: SettingKey): Promise<string> {
   if (!isSupabaseConfigured()) return DEFAULTS[key];
 
-  const supabase = await createClient();
+  const supabase = createServiceClient();
+  if (!supabase) {
+    console.error(
+      "SUPABASE_SERVICE_ROLE_KEY is not set, so the form inbox could not be read. Using the default address."
+    );
+    return DEFAULTS[key];
+  }
+
   const { data, error } = await supabase.rpc("form_recipient_email", { p_key: key });
 
   if (error) {

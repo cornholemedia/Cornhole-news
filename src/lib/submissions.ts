@@ -1,7 +1,6 @@
 import "server-only";
 import { sendSiteEmail } from "@/lib/email";
 import {
-  FORM_RATE_LIMIT_ERROR,
   FORM_SAVE_ERROR,
   HONEYPOT_FIELD,
   emailSubject,
@@ -11,15 +10,19 @@ import {
   parseNewsletterFields,
   type FormStatus,
 } from "@/lib/form-fields";
-import { requestIpHash } from "@/lib/request-ip";
+import { recordIpAttempt } from "@/lib/rate-limit";
+import { requestClientIp, requestIpHash } from "@/lib/request-ip";
 import { CONTACT_RECIPIENT_KEY, recipientEmail } from "@/lib/site-settings";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { verifyTurnstileToken, TURNSTILE_FIELD } from "@/lib/turnstile";
+import { newsletterUnsubscribeUrl } from "@/lib/unsubscribe";
+import { getSiteUrl } from "@/lib/site";
 
 const MISSING_SUPABASE_WARNING =
   "NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is not set. The form submission was not saved.";
 
-type FormClient = Awaited<ReturnType<typeof createClient>>;
+type FormClient = NonNullable<ReturnType<typeof createServiceClient>>;
 
 function blank(value: string): string {
   return value.trim() ? value.trim() : "(not provided)";
@@ -36,27 +39,22 @@ async function formClient(): Promise<FormClient | null> {
     console.warn(MISSING_SUPABASE_WARNING);
     return null;
   }
-  return createClient();
+  const supabase = createServiceClient();
+  if (!supabase) {
+    console.error(
+      "SUPABASE_SERVICE_ROLE_KEY is not set. The form submission was not saved."
+    );
+  }
+  return supabase;
 }
 
-async function withinRateLimit(
-  supabase: FormClient,
-  form: "contact" | "job" | "newsletter",
-  ipHash: string | null
-): Promise<boolean | null> {
-  if (!ipHash) return true;
-
-  const { data, error } = await supabase.rpc("record_form_attempt", {
-    p_form: form,
-    p_ip_hash: ipHash,
-  });
-
-  if (error) {
-    console.warn("Could not record a form attempt:", error.message);
-    return null;
-  }
-
-  return data === true;
+async function assertHuman(formData: FormData): Promise<FormStatus | null> {
+  const verified = await verifyTurnstileToken(
+    fieldValue(formData.get(TURNSTILE_FIELD)),
+    await requestClientIp()
+  );
+  if (!verified.ok) return verified;
+  return null;
 }
 
 export async function submitContactForm(formData: FormData): Promise<FormStatus> {
@@ -72,13 +70,15 @@ export async function submitContactForm(formData: FormData): Promise<FormStatus>
     return { ok: true };
   }
 
+  const human = await assertHuman(formData);
+  if (human) return human;
+
   const supabase = await formClient();
   if (!supabase) return { ok: false, error: FORM_SAVE_ERROR };
 
   const ipHash = await requestIpHash();
-  const allowed = await withinRateLimit(supabase, "contact", ipHash);
-  if (allowed === null) return { ok: false, error: FORM_SAVE_ERROR };
-  if (!allowed) return { ok: false, error: FORM_RATE_LIMIT_ERROR };
+  const allowed = await recordIpAttempt("contact", ipHash);
+  if (!allowed.ok) return allowed;
 
   const { value } = parsed;
   const to = await recipientEmail(CONTACT_RECIPIENT_KEY);
@@ -129,20 +129,24 @@ async function sendNewsletterEmails(email: string, source: string): Promise<void
 
   const inbox = await recipientEmail(CONTACT_RECIPIENT_KEY);
   const page = source || "/";
+  const unsubscribe = newsletterUnsubscribeUrl(email);
+  const lines = [
+    "Thanks for subscribing to Cornhole News.",
+    "",
+    "We'll send Midwest news to this email address. Cornhole News is a community news and discussion site for the 12 Midwestern states.",
+    "",
+    "If you did not ask for this, you can ignore the message.",
+  ];
+  if (unsubscribe) {
+    lines.push("", `Unsubscribe: ${unsubscribe}`);
+  }
+  lines.push("", getSiteUrl());
 
   await sendSiteEmail({
     to: email,
     replyTo: inbox,
     subject: "You're subscribed to Cornhole News",
-    text: [
-      "Thanks for subscribing to Cornhole News.",
-      "",
-      "We'll send Midwest news to this email address. Cornhole News is a community news and discussion site for the 12 Midwestern states.",
-      "",
-      "If you did not ask for this, you can ignore the message.",
-      "",
-      "https://cornholenews.news",
-    ].join("\n"),
+    text: lines.join("\n"),
   });
 
   await sendSiteEmail({
@@ -169,13 +173,15 @@ export async function submitNewsletterForm(formData: FormData): Promise<FormStat
     return { ok: true, message: NEWSLETTER_SUCCESS };
   }
 
+  const human = await assertHuman(formData);
+  if (human) return human;
+
   const supabase = await formClient();
   if (!supabase) return { ok: false, error: FORM_SAVE_ERROR };
 
   const ipHash = await requestIpHash();
-  const allowed = await withinRateLimit(supabase, "newsletter", ipHash);
-  if (allowed === null) return { ok: false, error: FORM_SAVE_ERROR };
-  if (!allowed) return { ok: false, error: FORM_RATE_LIMIT_ERROR };
+  const allowed = await recordIpAttempt("newsletter", ipHash);
+  if (!allowed.ok) return allowed;
 
   const { value } = parsed;
   const { error } = await supabase.from("newsletter_subscribers").insert({

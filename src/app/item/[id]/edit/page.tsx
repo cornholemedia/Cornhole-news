@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PoliticsField from "@/components/PoliticsField";
+import { cleanPostBody, cleanPostTitle, safePostUrl } from "@/lib/post-fields";
 
 type PostRow = {
   id: number;
@@ -93,10 +94,32 @@ export default function EditPostPage() {
     setError(null);
     setSaving(true);
 
+    const nextTitle = cleanPostTitle(title);
+    if (!nextTitle) {
+      setSaving(false);
+      setError("Title is required and must be 300 characters or fewer.");
+      return;
+    }
+
+    const rawUrl = url.trim();
+    const nextUrl = rawUrl ? safePostUrl(rawUrl) : null;
+    if (rawUrl && !nextUrl) {
+      setSaving(false);
+      setError("Enter a valid http or https link.");
+      return;
+    }
+
+    const nextBody = cleanPostBody(body);
+    if (nextBody === null) {
+      setSaving(false);
+      setError("The text must be 10,000 characters or fewer.");
+      return;
+    }
+
     const payload = {
-      title: title.trim(),
-      url: url.trim() || null,
-      body: body.trim() || null,
+      title: nextTitle,
+      url: nextUrl,
+      body: nextBody || null,
       is_political: isPolitical,
     };
 

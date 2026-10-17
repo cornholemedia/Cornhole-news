@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import PasswordInput from "@/components/PasswordInput";
+import TurnstileField from "@/components/TurnstileField";
 import { signUpAccount } from "@/app/signup/actions";
+import { PASSWORD_MIN_LENGTH } from "@/lib/passwords";
 
 export default function SignupPage() {
   const [username, setUsername] = useState("");
@@ -12,6 +14,7 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [turnstileKey, setTurnstileKey] = useState(0);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -23,6 +26,7 @@ export default function SignupPage() {
     setLoading(false);
     if (!result.ok) {
       setError(result.error);
+      setTurnstileKey((key) => key + 1);
       return;
     }
 
@@ -90,7 +94,7 @@ export default function SignupPage() {
             id="signup-password"
             name="password"
             required
-            minLength={6}
+            minLength={PASSWORD_MIN_LENGTH}
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -115,6 +119,8 @@ export default function SignupPage() {
             </Link>
           </span>
         </label>
+
+        <TurnstileField resetKey={String(turnstileKey)} />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

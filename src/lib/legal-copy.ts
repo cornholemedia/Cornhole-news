@@ -3,7 +3,7 @@ export const PRIVACY_TITLE = "Privacy Policy";
 export const PRIVACY_SUBTITLE =
   "How Cornhole Media handles information on Cornhole News.";
 
-export const PRIVACY_BODY = `Effective date: October 8, 2026.
+export const PRIVACY_BODY = `Effective date: October 17, 2026.
 
 Cornhole Media ("we", "us") operates Cornhole News at https://cornholenews.news. The site is a news and discussion community for the 12 Midwestern states, where people share links, posts, and comments. This policy says what we collect, why we collect it, who helps us run the site, and how you can reach us.
 
@@ -18,12 +18,15 @@ We collect what the site needs in order to work:
 - **Account details.** When you sign up we collect your email address and username. Your password is handled by Supabase Auth. We do not see or store the password itself.
 - **Age confirmation.** Signup asks you to confirm that you are at least 13 and that you agree to the Terms of Use and this Privacy Policy. We do not collect birthdates.
 - **Posts and comments.** We store the links, text, and comments you submit, and the votes you cast, with the account that posted them.
-- **Contact form.** Name, email address, subject if you include one, and your message. We also store a one-way hash of the IP address, not the address itself, so we can limit repeated submissions.
+- **Contact form.** Name, email address, subject if you include one, and your message. We email that message to the operator's contact inbox and keep a copy. We also store a one-way hash of the IP address, not the address itself, so we can limit repeated submissions.
 - **Job postings.** When an employer posts a job, we collect the job title, company name, an optional company website, the city and Midwest state, whether the work is on-site, hybrid, or remote, the employment type, optional pay details, the job description, and how to apply (a web link, an email address, or both). We also collect the poster's name and email so we can review the posting and contact them. The poster's name and email are not shown on the public job page. We store the same kind of IP hash as on the contact form.
 - **Server logs.** Our host keeps basic technical logs, such as the browser type, the time, and the page requested, to keep the site secure and running.
 - **Analytics.** We use Vercel Web Analytics. It is cookieless. It does not record your session and it does not replay what you do on the page. It gives us aggregate counts, such as how many people opened a page.
+- **Bot check.** When the check is turned on, signup, login, password reset, and the public forms ask Cloudflare Turnstile whether a person submitted them. This is not used for advertising.
 
-We do not run a newsletter, and the site has no paid plans, so we do not collect payment card numbers and we do not send marketing email.
+The site has no paid plans, so we do not collect payment card numbers.
+
+- **Newsletter.** If you join from the footer, we store your email address, the page you signed up from, and a one-way hash of your IP address. We email that address to confirm the signup, and we may send Midwest news after that. Every newsletter message includes an unsubscribe link. The link works without an account. After you unsubscribe we keep the address with an unsubscribed status so we do not email it again.
 
 ## Why we collect it
 
@@ -31,6 +34,7 @@ We do not run a newsletter, and the site has no paid plans, so we do not collect
 - To publish the posts, comments, and votes you choose to share
 - To read and reply to contact messages
 - To review job postings and contact the person who submitted one
+- To email you the newsletter you joined, and to stop emailing you after you unsubscribe
 - To limit spam, abuse, and repeated form submissions
 - To keep the site secure and to see, in aggregate, which pages are used
 - To respond to a legal request, such as a copyright notice
@@ -41,7 +45,7 @@ We do not sell personal information. These companies process it for us so the si
 
 - **Supabase** stores the database and runs account login. Resume files from older job applications, if any were uploaded, stay in a private storage bucket.
 - **Vercel** hosts the website and provides the cookieless analytics described above.
-- **Resend** delivers contact messages and new job-posting notices to the inbox set by the site operator.
+- **Resend** delivers contact-form messages, new job-posting notices, and newsletter mail.
 
 We may also disclose information if the law requires it, or to protect the site and its users from abuse.
 
@@ -53,6 +57,7 @@ We use cookies only to keep you signed in. Those are authentication session cook
 
 - Account records, posts, and comments stay until you delete them or you ask us to delete your account.
 - Contact messages are kept long enough to reply, and then for up to 24 months, unless a legal claim means we need a copy longer. Job postings stay on the site until they expire or we remove them. We keep the posting, including the poster's private contact details, for up to 24 months after it comes down. Resume files from older job applications, if we still have them, are kept for up to 24 months from the date they were sent.
+- Newsletter addresses stay until you unsubscribe or you ask us to delete them. After you unsubscribe we keep the address marked unsubscribed so a later signup does not turn the mail back on by itself.
 - IP hashes used to limit abuse are deleted after about two days.
 - Server logs follow our host's ordinary retention schedule.
 

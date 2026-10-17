@@ -49,10 +49,8 @@ create policy "Admins can delete any comment"
     )
   );
 
--- Mark the Cornhole_Admin profile as admin once it exists
-update public.profiles
-set is_admin = true
-where username = 'Cornhole_Admin';
+-- Do not auto-promote a public username. Grant admin from the SQL editor:
+--   update public.profiles set is_admin = true where username = 'your_username';
 
 -- Harden posts_with_stats: prefer invoker rights when supported
 do $$

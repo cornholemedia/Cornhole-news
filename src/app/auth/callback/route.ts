@@ -21,6 +21,16 @@ function resetPasswordRedirect(origin: string, error?: string) {
   return url;
 }
 
+function confirmedRedirect(origin: string) {
+  return new URL("/", origin);
+}
+
+function confirmErrorRedirect(origin: string) {
+  const url = new URL("/login", origin);
+  url.searchParams.set("error", "confirm");
+  return url;
+}
+
 function failureCode(message: string) {
   const lower = message.toLowerCase();
   if (lower.includes("code verifier") || lower.includes("pkce")) {
@@ -37,13 +47,15 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
+  const confirming = type === "signup" || type === "email";
   const isRecoveryToken = Boolean(tokenHash && type === "recovery");
+  const isSignupToken = Boolean(tokenHash && confirming);
 
-  if (!code && !isRecoveryToken) {
+  if (!code && !isRecoveryToken && !isSignupToken) {
     return NextResponse.redirect(resetPasswordRedirect(origin, "invalid_link"));
   }
 
-  const successUrl = resetPasswordRedirect(origin);
+  const successUrl = confirming ? confirmedRedirect(origin) : resetPasswordRedirect(origin);
   const response = NextResponse.redirect(successUrl);
 
   const supabase = createServerClient(
@@ -66,20 +78,28 @@ export async function GET(request: NextRequest) {
     }
   );
 
-  if (isRecoveryToken) {
+  if (isRecoveryToken || isSignupToken) {
     const { error } = await supabase.auth.verifyOtp({
       type: type as EmailOtpType,
       token_hash: tokenHash!,
     });
     if (error) {
-      return NextResponse.redirect(resetPasswordRedirect(origin, failureCode(error.message)));
+      return NextResponse.redirect(
+        confirming
+          ? confirmErrorRedirect(origin)
+          : resetPasswordRedirect(origin, failureCode(error.message))
+      );
     }
     return response;
   }
 
   const { error } = await supabase.auth.exchangeCodeForSession(code!);
   if (error) {
-    return NextResponse.redirect(resetPasswordRedirect(origin, failureCode(error.message)));
+    return NextResponse.redirect(
+      confirming
+        ? confirmErrorRedirect(origin)
+        : resetPasswordRedirect(origin, failureCode(error.message))
+    );
   }
   return response;
 }

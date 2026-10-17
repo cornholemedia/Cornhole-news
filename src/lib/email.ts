@@ -1,11 +1,19 @@
 import "server-only";
 import type { Attachment } from "resend";
 
-export const DEFAULT_FROM_EMAIL = "Cornhole News <onboarding@resend.dev>";
+let loggedMissingFrom = false;
 
-export function contactFromAddress(): string {
+export function contactFromAddress(): string | null {
   const configured = process.env.CONTACT_FROM_EMAIL?.trim();
-  return configured || DEFAULT_FROM_EMAIL;
+  if (configured) return configured;
+
+  if (!loggedMissingFrom) {
+    loggedMissingFrom = true;
+    console.error(
+      "CONTACT_FROM_EMAIL is not set. No email was sent. Set it to a verified sender such as Cornhole News <noreply@cornholenews.news> and redeploy."
+    );
+  }
+  return null;
 }
 
 export async function sendSiteEmail(input: {
@@ -15,6 +23,9 @@ export async function sendSiteEmail(input: {
   text: string;
   attachments?: Attachment[];
 }): Promise<{ sent: boolean; error?: string }> {
+  const from = contactFromAddress();
+  if (!from) return { sent: false, error: "missing_from_address" };
+
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) {
     console.warn(
@@ -27,7 +38,7 @@ export async function sendSiteEmail(input: {
     const { Resend } = await import("resend");
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
-      from: contactFromAddress(),
+      from,
       to: input.to,
       replyTo: input.replyTo,
       subject: input.subject,

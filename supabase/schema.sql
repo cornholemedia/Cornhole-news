@@ -6,6 +6,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   username text unique not null,
   is_admin boolean not null default false,
+  is_banned boolean not null default false,
   show_politics boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -55,6 +56,9 @@ begin
     if coalesce(new.is_admin, false) and auth.uid() is not null and not public.is_admin() then
       new.is_admin := false;
     end if;
+    if coalesce(new.is_banned, false) and auth.uid() is not null and not public.is_admin() then
+      new.is_banned := false;
+    end if;
     return new;
   end if;
 
@@ -62,6 +66,12 @@ begin
      and auth.uid() is not null
      and not public.is_admin() then
     raise exception 'Only an existing admin, or the Supabase SQL editor, can change is_admin';
+  end if;
+
+  if new.is_banned is distinct from old.is_banned
+     and auth.uid() is not null
+     and not public.is_admin() then
+    raise exception 'Only an existing admin, or the Supabase SQL editor, can change is_banned';
   end if;
 
   return new;
@@ -76,9 +86,37 @@ create trigger profiles_protect_admin_flag
   before insert or update on public.profiles
   for each row execute procedure public.protect_profile_admin_flag();
 
-update public.profiles
-set is_admin = true
-where username = 'Cornhole_Admin';
+-- Public signup cannot take Cornhole_Admin. The SQL editor still can.
+create or replace function public.reserve_cornhole_admin_username()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  if lower(btrim(new.username)) is distinct from 'cornhole_admin' then
+    return new;
+  end if;
+
+  if tg_op = 'UPDATE' and lower(btrim(old.username)) = 'cornhole_admin' then
+    return new;
+  end if;
+
+  if session_user in ('postgres', 'supabase_admin') then
+    return new;
+  end if;
+
+  raise exception 'That username is reserved.' using errcode = '42501';
+end;
+$$;
+
+revoke all on function public.reserve_cornhole_admin_username() from public, anon;
+grant execute on function public.reserve_cornhole_admin_username() to authenticated, service_role;
+
+drop trigger if exists profiles_reserve_admin_username on public.profiles;
+create trigger profiles_reserve_admin_username
+  before insert or update on public.profiles
+  for each row execute procedure public.reserve_cornhole_admin_username();
 
 revoke update on table public.profiles from anon, authenticated;
 grant update (username, show_politics) on table public.profiles to authenticated;
@@ -112,8 +150,21 @@ create trigger on_auth_user_created
 create table if not exists public.posts (
   id bigint generated always as identity primary key,
   title text not null check (char_length(title) between 1 and 300),
-  url text,
-  body text,
+  url text check (
+    url is null
+    or (
+      char_length(url) between 8 and 2000
+      and url ~* '^https?://[^[:space:][:cntrl:]]+$'
+      and url !~* '^https?://[^/?#]*@'
+    )
+  ),
+  body text check (
+    body is null
+    or (
+      char_length(body) between 1 and 10000
+      and strpos(body, chr(0)) = 0
+    )
+  ),
   author_id uuid not null references public.profiles(id) on delete cascade,
   created_at timestamptz not null default now(),
   is_political boolean not null default false
@@ -127,7 +178,10 @@ create policy "Posts are viewable by everyone"
 
 create policy "Logged-in users can create posts"
   on public.posts for insert
-  with check (auth.uid() = author_id);
+  with check (
+    auth.uid() = author_id
+    and not coalesce((select p.is_banned from public.profiles p where p.id = auth.uid()), false)
+  );
 
 create policy "Authors can delete their own posts"
   on public.posts for delete
@@ -149,7 +203,10 @@ create policy "Votes are viewable by everyone"
 
 create policy "Logged-in users can vote"
   on public.votes for insert
-  with check (auth.uid() = user_id);
+  with check (
+    auth.uid() = user_id
+    and not coalesce((select p.is_banned from public.profiles p where p.id = auth.uid()), false)
+  );
 
 create policy "Users can remove their own vote"
   on public.votes for delete
@@ -172,7 +229,10 @@ create policy "Comments are viewable by everyone"
 
 create policy "Logged-in users can comment"
   on public.comments for insert
-  with check (auth.uid() = author_id);
+  with check (
+    auth.uid() = author_id
+    and not coalesce((select p.is_banned from public.profiles p where p.id = auth.uid()), false)
+  );
 
 create policy "Authors can delete their own comments"
   on public.comments for delete
@@ -329,7 +389,7 @@ Interested in advertising? [Contact us](/contact) and we'll get back to you with
     'privacy',
     'Privacy Policy',
     'How Cornhole Media handles information on Cornhole News.',
-    $privacy$Effective date: October 8, 2026.
+    $privacy$Effective date: October 17, 2026.
 
 Cornhole Media ("we", "us") operates Cornhole News at https://cornholenews.news. The site is a news and discussion community for the 12 Midwestern states, where people share links, posts, and comments. This policy says what we collect, why we collect it, who helps us run the site, and how you can reach us.
 
@@ -344,12 +404,15 @@ We collect what the site needs in order to work:
 - **Account details.** When you sign up we collect your email address and username. Your password is handled by Supabase Auth. We do not see or store the password itself.
 - **Age confirmation.** Signup asks you to confirm that you are at least 13 and that you agree to the Terms of Use and this Privacy Policy. We do not collect birthdates.
 - **Posts and comments.** We store the links, text, and comments you submit, and the votes you cast, with the account that posted them.
-- **Contact form.** Name, email address, subject if you include one, and your message. We also store a one-way hash of the IP address, not the address itself, so we can limit repeated submissions.
+- **Contact form.** Name, email address, subject if you include one, and your message. We email that message to the operator's contact inbox and keep a copy. We also store a one-way hash of the IP address, not the address itself, so we can limit repeated submissions.
 - **Job postings.** When an employer posts a job, we collect the job title, company name, an optional company website, the city and Midwest state, whether the work is on-site, hybrid, or remote, the employment type, optional pay details, the job description, and how to apply (a web link, an email address, or both). We also collect the poster's name and email so we can review the posting and contact them. The poster's name and email are not shown on the public job page. We store the same kind of IP hash as on the contact form.
 - **Server logs.** Our host keeps basic technical logs, such as the browser type, the time, and the page requested, to keep the site secure and running.
 - **Analytics.** We use Vercel Web Analytics. It is cookieless. It does not record your session and it does not replay what you do on the page. It gives us aggregate counts, such as how many people opened a page.
+- **Bot check.** When the check is turned on, signup, login, password reset, and the public forms ask Cloudflare Turnstile whether a person submitted them. This is not used for advertising.
 
-We do not run a newsletter, and the site has no paid plans, so we do not collect payment card numbers and we do not send marketing email.
+The site has no paid plans, so we do not collect payment card numbers.
+
+- **Newsletter.** If you join from the footer, we store your email address, the page you signed up from, and a one-way hash of your IP address. We email that address to confirm the signup, and we may send Midwest news after that. Every newsletter message includes an unsubscribe link. The link works without an account. After you unsubscribe we keep the address with an unsubscribed status so we do not email it again.
 
 ## Why we collect it
 
@@ -357,6 +420,7 @@ We do not run a newsletter, and the site has no paid plans, so we do not collect
 - To publish the posts, comments, and votes you choose to share
 - To read and reply to contact messages
 - To review job postings and contact the person who submitted one
+- To email you the newsletter you joined, and to stop emailing you after you unsubscribe
 - To limit spam, abuse, and repeated form submissions
 - To keep the site secure and to see, in aggregate, which pages are used
 - To respond to a legal request, such as a copyright notice
@@ -367,7 +431,7 @@ We do not sell personal information. These companies process it for us so the si
 
 - **Supabase** stores the database and runs account login. Resume files from older job applications, if any were uploaded, stay in a private storage bucket.
 - **Vercel** hosts the website and provides the cookieless analytics described above.
-- **Resend** delivers contact messages and new job-posting notices to the inbox set by the site operator.
+- **Resend** delivers contact-form messages, new job-posting notices, and newsletter mail.
 
 We may also disclose information if the law requires it, or to protect the site and its users from abuse.
 
@@ -379,6 +443,7 @@ We use cookies only to keep you signed in. Those are authentication session cook
 
 - Account records, posts, and comments stay until you delete them or you ask us to delete your account.
 - Contact messages are kept long enough to reply, and then for up to 24 months, unless a legal claim means we need a copy longer. Job postings stay on the site until they expire or we remove them. We keep the posting, including the poster's private contact details, for up to 24 months after it comes down. Resume files from older job applications, if we still have them, are kept for up to 24 months from the date they were sent.
+- Newsletter addresses stay until you unsubscribe or you ask us to delete them. After you unsubscribe we keep the address marked unsubscribed so a later signup does not turn the mail back on by itself.
 - IP hashes used to limit abuse are deleted after about two days.
 - Server logs follow our host's ordinary retention schedule.
 

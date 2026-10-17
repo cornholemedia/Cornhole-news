@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { applyLegalPlaceholders } from "@/lib/legal-placeholders";
 import {
   DEFAULT_PAGES,
   PAGE_SLUGS,
@@ -17,6 +18,15 @@ type PageRow = {
   body: string | null;
   updated_at: string | null;
 };
+
+function withLegalPlaceholders(page: StaticPageContent): StaticPageContent {
+  return {
+    ...page,
+    title: applyLegalPlaceholders(page.title),
+    subtitle: applyLegalPlaceholders(page.subtitle),
+    body: applyLegalPlaceholders(page.body),
+  };
+}
 
 function publishedFromRow(slug: PageSlug, row: PageRow | null): StaticPageContent {
   const fallback = DEFAULT_PAGES[slug];
@@ -57,9 +67,9 @@ const fetchPageRows = cache(async (): Promise<{ rows: PageRow[]; loadError: stri
 
 export async function getPublishedPage(slug: PageSlug): Promise<StaticPageContent> {
   const { rows, loadError } = await fetchPageRows();
-  if (loadError) return defaultPage(slug);
+  if (loadError) return withLegalPlaceholders(defaultPage(slug));
   const row = rows.find((entry) => entry.slug === slug) ?? null;
-  return publishedFromRow(slug, row);
+  return withLegalPlaceholders(publishedFromRow(slug, row));
 }
 
 export async function getPagesForAdmin(): Promise<EditablePage[]> {
