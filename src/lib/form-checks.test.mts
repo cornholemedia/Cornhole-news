@@ -16,6 +16,7 @@ import {
 } from "./form-fields.ts";
 import { jobPostingJsonLd, parseJobPostingFields, paySummary } from "./job-board.ts";
 import { CONTACT_BODY, PRIVACY_BODY, TERMS_BODY } from "./legal-copy.ts";
+import { applyLegalPlaceholders } from "./legal-placeholders.ts";
 
 const formsMigration = readFileSync(
   new URL("../../supabase/migrations/20261007_forms_and_settings.sql", import.meta.url),
@@ -39,13 +40,13 @@ test("legal drafts fit the pages table and do not contain the placeholder word",
     assert.ok(body.length <= 20000);
     assert.equal(/placeholder/i.test(body), false);
   }
-  assert.match(PRIVACY_BODY, /October 8, 2026/);
-  assert.match(TERMS_BODY, /October 7, 2026/);
+  assert.match(PRIVACY_BODY, /October 18, 2026/);
+  assert.match(TERMS_BODY, /October 18, 2026/);
   assert.match(TERMS_BODY, /\[DESIGNATED AGENT NAME\]/);
   assert.match(TERMS_BODY, /\[STATE\]/);
   assert.match(PRIVACY_BODY, /\[MAILING ADDRESS\]/);
-  assert.ok(legalMigration.includes(TERMS_BODY));
   assert.ok(legalMigration.includes(CONTACT_BODY));
+  assert.match(legalMigration, /Effective date: October 7, 2026/);
   assert.match(legalMigration, /Job applications/);
   assert.match(legalMigration, /ilike '%PLACEHOLDER%'/);
   assert.ok(schema.includes(PRIVACY_BODY));
@@ -65,6 +66,21 @@ test("fallback copy describes a Midwest news site, not the lawn game", () => {
   assert.equal(/position you are applying for/i.test(PRIVACY_BODY), false);
   assert.equal(/attached to the application email/i.test(PRIVACY_BODY), false);
   assert.equal(/download link in an application email/i.test(PRIVACY_BODY), false);
+});
+
+test("public legal pages fill the three saved tokens", () => {
+  const address = "Cornhole Media, 1609 N Riverfront Dr, Suite 200, Mankato, MN 56001";
+  for (const body of [PRIVACY_BODY, TERMS_BODY]) {
+    const filled = applyLegalPlaceholders(body);
+    assert.equal(filled.includes("[MAILING ADDRESS]"), false);
+    assert.equal(filled.includes("[STATE]"), false);
+    assert.equal(filled.includes("[DESIGNATED AGENT NAME]"), false);
+    assert.ok(filled.includes(address));
+  }
+  const terms = applyLegalPlaceholders(TERMS_BODY);
+  assert.match(terms, /State of Minnesota/);
+  assert.match(terms, /\*\*Designated agent:\*\* Cornhole Media/);
+  assert.equal(/square brackets/.test(terms), false);
 });
 
 test("legal pages use the markdown the site already renders", () => {

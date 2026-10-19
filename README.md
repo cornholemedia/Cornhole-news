@@ -32,6 +32,7 @@ voting, comments).
    - `supabase/migrations/20261017_content_guards.sql`
    - `supabase/migrations/20261017_form_lockdown.sql`
    - `supabase/migrations/20261017_privacy_newsletter.sql`
+   - `supabase/migrations/20261019_legal_placeholders.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -272,11 +273,15 @@ accounts that are not admins.
    - `supabase/migrations/20261017_content_guards.sql`
    - `supabase/migrations/20261017_form_lockdown.sql`
    - `supabase/migrations/20261017_privacy_newsletter.sql`
+   - `supabase/migrations/20261019_legal_placeholders.sql`
    The first reserves username `Cornhole_Admin` and adds bans. The second
    limits posts and comments and freezes `created_at`. The third stops
    anonymous writes to the contact, newsletter, and job tables, and to the
    old resume bucket. The fourth updates the saved privacy page where it
-   still says the site has no newsletter. Re-running `20260923_editable_pages.sql`
+   still says the site has no newsletter. The fifth fills any leftover
+   address, state, and agent tokens, adds the one-click unsubscribe
+   sentence to the saved privacy page, and sets the privacy and terms
+   dates to October 18, 2026. Re-running `20260923_editable_pages.sql`
    after the ban file removes the ban guard. Run `20261017_user_bans.sql` again
    if you do that.
 2. Mark the account that should edit pages. In the SQL editor:
@@ -291,10 +296,10 @@ as `Cornhole_Admin`. That username is reserved and is not promoted automatically
 3. Log in as that user. The header shows an **admin** link. Open `/admin`, edit a
    page, and save. The public page shows the saved title, subtitle, and body.
    A blank body keeps the built-in copy. Privacy and Terms ship as full drafts.
-   Have a lawyer review them. Fill `[MAILING ADDRESS]`, `[STATE]`, and
-   `[DESIGNATED AGENT NAME]` in `src/lib/legal-placeholders.ts`, then redeploy.
-   Public pages substitute those three values. The admin editor still shows
-   the tokens until you replace them there too.
+   Have a lawyer review them. The mailing address, governing state, and
+   designated agent are set in `src/lib/legal-placeholders.ts`. Public pages
+   substitute those three values, including text saved in the database.
+   The admin editor still shows the tokens until you replace them there too.
    The contact and jobs pages show that saved text above the forms.
 4. On the same admin screen, set the two inbox addresses, open **Review digest**
    for the daily Midwest queue, and review job postings.
