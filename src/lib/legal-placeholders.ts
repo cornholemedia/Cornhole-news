@@ -1,13 +1,12 @@
 /**
- * Fill these three before you rely on the Privacy Policy or Terms of Use.
- * Leave the square-bracket text until you have the real value.
- * Public pages replace these tokens wherever they still appear, including
- * copy saved in the database. The admin editor still shows the tokens.
+ * Public privacy and terms pages replace these tokens wherever they still
+ * appear, including copy saved in the database. The admin editor still
+ * shows the tokens.
  */
 export const LEGAL_PLACEHOLDERS = {
-  mailingAddress: "[MAILING ADDRESS]",
-  governingState: "[STATE]",
-  designatedAgentName: "[DESIGNATED AGENT NAME]",
+  mailingAddress: "Cornhole Media, 1609 N Riverfront Dr, Suite 200, Mankato, MN 56001",
+  governingState: "Minnesota",
+  designatedAgentName: "Cornhole Media",
 } as const;
 
 const TOKEN_VALUES: Record<string, string> = {

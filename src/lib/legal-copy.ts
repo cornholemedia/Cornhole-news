@@ -3,7 +3,7 @@ export const PRIVACY_TITLE = "Privacy Policy";
 export const PRIVACY_SUBTITLE =
   "How Cornhole Media handles information on Cornhole News.";
 
-export const PRIVACY_BODY = `Effective date: October 17, 2026.
+export const PRIVACY_BODY = `Effective date: October 18, 2026.
 
 Cornhole Media ("we", "us") operates Cornhole News at https://cornholenews.news. The site is a news and discussion community for the 12 Midwestern states, where people share links, posts, and comments. This policy says what we collect, why we collect it, who helps us run the site, and how you can reach us.
 
@@ -95,7 +95,7 @@ export const TERMS_TITLE = "Terms of Use";
 
 export const TERMS_SUBTITLE = "The rules for using Cornhole News.";
 
-export const TERMS_BODY = `Effective date: October 7, 2026.
+export const TERMS_BODY = `Effective date: October 18, 2026.
 
 These terms are an agreement between you and Cornhole Media for your use of Cornhole News at https://cornholenews.news. If you do not agree, do not use the site.
 
@@ -135,7 +135,7 @@ We respect the intellectual property of others. If you believe material on the s
 - **Postal address:** [MAILING ADDRESS]
 - **Email:** [cornholemedia@gmail.com](mailto:cornholemedia@gmail.com)
 
-note: Cornhole Media still has to register this designated agent with the U.S. Copyright Office. Until that registration is complete, the agent name and postal address above are fill-in text in square brackets.
+note: Cornhole Media still has to register this designated agent with the U.S. Copyright Office.
 
 Your notice must include all of the following:
 
