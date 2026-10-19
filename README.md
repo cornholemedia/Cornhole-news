@@ -33,6 +33,7 @@ voting, comments).
    - `supabase/migrations/20261017_form_lockdown.sql`
    - `supabase/migrations/20261017_privacy_newsletter.sql`
    - `supabase/migrations/20261019_legal_placeholders.sql`
+   - `supabase/migrations/20261019_post_rate_limit_scope.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -274,6 +275,7 @@ accounts that are not admins.
    - `supabase/migrations/20261017_form_lockdown.sql`
    - `supabase/migrations/20261017_privacy_newsletter.sql`
    - `supabase/migrations/20261019_legal_placeholders.sql`
+   - `supabase/migrations/20261019_post_rate_limit_scope.sql`
    The first reserves username `Cornhole_Admin` and adds bans. The second
    limits posts and comments and freezes `created_at`. The third stops
    anonymous writes to the contact, newsletter, and job tables, and to the
@@ -281,7 +283,10 @@ accounts that are not admins.
    still says the site has no newsletter. The fifth fills any leftover
    address, state, and agent tokens, adds the one-click unsubscribe
    sentence to the saved privacy page, and sets the privacy and terms
-   dates to October 18, 2026. Re-running `20260923_editable_pages.sql`
+   dates to October 18, 2026. The sixth keeps the 6-per-hour and 20-per-day
+   post caps on signed-in writers, and leaves digest publish outside those caps.
+   Re-running `20261017_content_guards.sql` puts the caps back on digest publish;
+   run the sixth file again if you do that. Re-running `20260923_editable_pages.sql`
    after the ban file removes the ban guard. Run `20261017_user_bans.sql` again
    if you do that.
 2. Mark the account that should edit pages. In the SQL editor:

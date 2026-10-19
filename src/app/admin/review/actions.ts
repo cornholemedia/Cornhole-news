@@ -41,6 +41,9 @@ async function adminClient(): Promise<
 }
 
 function actionError(error: { message: string; code?: string }): string {
+  if (/several stories|too many|suspended|banned/i.test(error.message)) {
+    return error.message;
+  }
   if (error.code === "42501" || /not allowed/i.test(error.message)) {
     return "You need an admin account to do that.";
   }
