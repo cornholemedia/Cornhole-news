@@ -13,13 +13,19 @@ export type PostWithStats = {
   is_political: boolean;
 };
 
+/** Stories shown on one homepage page. */
+export const PAGE_SIZE = 30;
+
 type TopPostOptions = {
   /** When false, political posts are left out before sorting and limiting. */
   showPolitics?: boolean;
+  /** Zero-based row offset. Negative values are treated as zero. */
+  offset?: number;
 };
 
-export async function getTopPosts(limit = 30, options?: TopPostOptions): Promise<PostWithStats[]> {
+export async function getTopPosts(limit = PAGE_SIZE, options?: TopPostOptions): Promise<PostWithStats[]> {
   const supabase = await createClient();
+  const offset = Math.max(0, Math.floor(options?.offset ?? 0));
   let query = supabase.from("posts_with_stats").select("*");
 
   if (options?.showPolitics === false) {
@@ -29,7 +35,8 @@ export async function getTopPosts(limit = 30, options?: TopPostOptions): Promise
   const { data, error } = await query
     .order("points", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(limit);
+    // range() is inclusive, so a full page of 30 ends at offset + 29.
+    .range(offset, offset + limit - 1);
 
   if (error) {
     console.error("Error fetching top posts:", error.message);
