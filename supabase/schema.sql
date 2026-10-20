@@ -592,6 +592,7 @@ on conflict (slug) do nothing;
 -- 20261012_politics_tag.sql, then run 20261014_publish_one_digest_story.sql
 -- so each story can be published on its own, then
 -- 20261015_digest_story_politics.sql for the Politics checkbox and Finished,
--- then 20261016_digest_trade_industry.sql for the TRADE & INDUSTRY section.
+-- then 20261016_digest_trade_industry.sql for the TRADE & INDUSTRY section,
+-- then 20261020_digest_politics_section.sql for the POLITICS section.
 -- Publishing uses a Cornhole News profile; the steps to create that profile
 -- are at the top of the digest file.
