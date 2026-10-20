@@ -1,10 +1,11 @@
 import { isIP } from "node:net";
 import { timingSafeEqual } from "node:crypto";
 
-/** Keep these limits aligned with the digest migrations, including 20261016. */
+/** Keep these limits aligned with the digest migrations, including 20261020. */
 export const DIGEST_SECTIONS = [
   "QUIRKY",
   "SERIOUS",
+  "POLITICS",
   "AROUND THE MIDWEST",
   "NATIONAL PRESS",
   "TRADE & INDUSTRY",
@@ -49,6 +50,7 @@ export type IngestStory = {
   paper: string;
   state: string;
   synopsis: string;
+  is_political: boolean;
 };
 
 export type IngestPayload = {
@@ -267,7 +269,18 @@ export function parseIngestPayload(
       };
     }
 
-    stories.push({ section, headline, url, paper, state, synopsis });
+    let isPolitical = section === "POLITICS";
+    if ("is_political" in story && story.is_political != null) {
+      if (typeof story.is_political !== "boolean") {
+        return {
+          ok: false,
+          error: storyError(storyNumber, "needs a true or false Politics flag."),
+        };
+      }
+      if (story.is_political) isPolitical = true;
+    }
+
+    stories.push({ section, headline, url, paper, state, synopsis, is_political: isPolitical });
   }
 
   return { ok: true, value: { digestDate, stories } };

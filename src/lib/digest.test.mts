@@ -40,6 +40,7 @@ test("a digest story becomes a non-political post body with paper and state", ()
   assert.deepEqual(DIGEST_SECTIONS, [
     "QUIRKY",
     "SERIOUS",
+    "POLITICS",
     "AROUND THE MIDWEST",
     "NATIONAL PRESS",
     "TRADE & INDUSTRY",
@@ -53,6 +54,7 @@ test("ingest payload accepts one date of stories and rejects bad rows", () => {
   assert.equal(good.value.digestDate, "2026-10-13");
   assert.equal(good.value.stories[0]?.state, "IA");
   assert.equal(good.value.stories[0]?.section, "QUIRKY");
+  assert.equal(good.value.stories[0]?.is_political, false);
   assert.equal(
     parseIngestPayload({
       digest_date: "2026-10-13",
@@ -234,6 +236,76 @@ test("a digest politics flag is stored, copied onto the post, and delete all ski
   assert.match(reviewUi, /window\.confirm/);
   assert.match(reviewUi, /Published stories stay on the site/);
   assert.match(actions, /delete_pending_digest_stories/);
+});
+
+test("POLITICS is its own section after SERIOUS and presets the Politics flag", () => {
+  const politicsSection = readFileSync(
+    new URL("../../supabase/migrations/20261020_digest_politics_section.sql", import.meta.url),
+    "utf8"
+  );
+  const sections =
+    "'QUIRKY',\\s*'SERIOUS',\\s*'POLITICS',\\s*'AROUND THE MIDWEST',\\s*'NATIONAL PRESS',\\s*'TRADE & INDUSTRY'";
+  assert.equal(DIGEST_SECTIONS[1], "SERIOUS");
+  assert.equal(DIGEST_SECTIONS[2], "POLITICS");
+
+  const politicsStory = parseIngestPayload({
+    digest_date: "2026-10-20",
+    stories: [{ ...story, section: "POLITICS", url: "https://example.com/capitol" }],
+  });
+  assert.equal(politicsStory.ok, true);
+  if (politicsStory.ok) assert.equal(politicsStory.value.stories[0]?.is_political, true);
+
+  const flagged = parseIngestPayload({
+    digest_date: "2026-10-20",
+    stories: [{ ...story, url: "https://example.com/flagged", is_political: true }],
+  });
+  assert.equal(flagged.ok, true);
+  if (flagged.ok) assert.equal(flagged.value.stories[0]?.is_political, true);
+
+  const leftOff = parseIngestPayload({
+    digest_date: "2026-10-20",
+    stories: [{ ...story, url: "https://example.com/left-off", is_political: false }],
+  });
+  assert.equal(leftOff.ok, true);
+  if (leftOff.ok) assert.equal(leftOff.value.stories[0]?.is_political, false);
+
+  const politicsStaysOn = parseIngestPayload({
+    digest_date: "2026-10-20",
+    stories: [
+      {
+        ...story,
+        section: "POLITICS",
+        url: "https://example.com/stays-on",
+        is_political: false,
+      },
+    ],
+  });
+  assert.equal(politicsStaysOn.ok, true);
+  if (politicsStaysOn.ok) assert.equal(politicsStaysOn.value.stories[0]?.is_political, true);
+
+  assert.equal(
+    parseIngestPayload({
+      digest_date: "2026-10-20",
+      stories: [{ ...story, url: "https://example.com/bad-flag", is_political: "yes" }],
+    }).ok,
+    false
+  );
+
+  assert.match(politicsSection, /drop constraint if exists digest_stories_section_check/);
+  assert.match(politicsSection, new RegExp(`section in \\(\\s*${sections}\\s*\\)`));
+  assert.match(politicsSection, new RegExp(`not in \\(\\s*${sections}\\s*\\)`));
+  assert.match(politicsSection, /is_political = d\.is_political or i\.is_political/);
+  assert.equal(/set is_political = false/.test(politicsSection), false);
+  assert.match(
+    politicsSection,
+    /grant execute on function public\.ingest_digest_stories\(date, jsonb\) to service_role/
+  );
+  assert.equal(
+    /grant execute on function public\.ingest_digest_stories\(date, jsonb\) to (anon|authenticated)/.test(
+      politicsSection
+    ),
+    false
+  );
 });
 
 test("TRADE & INDUSTRY is allowed after NATIONAL PRESS", () => {

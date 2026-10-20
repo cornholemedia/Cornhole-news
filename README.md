@@ -34,6 +34,7 @@ voting, comments).
    - `supabase/migrations/20261017_privacy_newsletter.sql`
    - `supabase/migrations/20261019_legal_placeholders.sql`
    - `supabase/migrations/20261019_post_rate_limit_scope.sql`
+   - `supabase/migrations/20261020_digest_politics_section.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -169,13 +170,13 @@ redeploys automatically.
 - **Newsletter** — the footer has an email signup. Addresses are saved in Supabase. Admins can view them and export a CSV at `/admin`. A confirmation email is sent only when `RESEND_API_KEY` is set.
 - **Signup** — requires a confirmation that the person is at least 13 and agrees to the Terms and Privacy Policy
 - **Ads** — the sidebar placeholders stay hidden unless `SHOW_ADS=true`
-- **Daily digest** — an automated job can send Midwest stories to `/api/digest/ingest`. They stay hidden until an admin publishes them at `/admin/review`. Published stories are normal posts by Cornhole News. Politics stays off unless the admin turns it on for that story.
+- **Daily digest** — an automated job can send Midwest stories to `/api/digest/ingest`. They stay hidden until an admin publishes them at `/admin/review`. Published stories are normal posts by Cornhole News. A POLITICS story, or one sent with `is_political` true, arrives with Politics on. Any other story stays off until an admin turns it on. A later send never turns that checkbox off.
 
 ## Daily Midwest digest
 
 The job sends one day at a time. Stories stay in a private queue until an admin opens `/admin/review` and clicks **Publish** on each one. Each story has a Politics checkbox, off by default. Delete hides one story. **Finished** hides every story still waiting for the selected date and leaves published stories up. The date list is only the last 7 days in Chicago time, and only days that already have stories. Choosing a date loads it immediately. A later send of that same date and URL does not bring a deleted story back, and it does not change a story that was already published or clear its Politics checkbox. Links left out of a later send stay pending until you delete them. Nothing is posted automatically. Clicking Publish twice does not create two posts.
 
-Run `supabase/migrations/20261013_digest_stories.sql` in the Supabase SQL editor, then `supabase/migrations/20261014_publish_one_digest_story.sql`, then `supabase/migrations/20261015_digest_story_politics.sql`, then `supabase/migrations/20261016_digest_trade_industry.sql`. Create the **Cornhole News** author using the steps at the top of the first digest file. Set `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel and redeploy.
+Run `supabase/migrations/20261013_digest_stories.sql` in the Supabase SQL editor, then `supabase/migrations/20261014_publish_one_digest_story.sql`, then `supabase/migrations/20261015_digest_story_politics.sql`, then `supabase/migrations/20261016_digest_trade_industry.sql`, then `supabase/migrations/20261020_digest_politics_section.sql`. Create the **Cornhole News** author using the steps at the top of the first digest file. Set `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel and redeploy.
 
 ```bash
 curl -sS -X POST "https://cornholenews.news/api/digest/ingest" \
@@ -196,7 +197,7 @@ curl -sS -X POST "https://cornholenews.news/api/digest/ingest" \
   }'
 ```
 
-`section` is exactly one of `QUIRKY`, `SERIOUS`, `AROUND THE MIDWEST`, `NATIONAL PRESS`, or `TRADE & INDUSTRY`. `state` is the two-letter code that shows up as "Paper, ST". `url` must be `https`. At most 100 stories per request. A successful response looks like `{"ok":true,"digest_date":"2026-10-13","inserted":1,"updated":0,"skipped":0}`. `skipped` means that URL was already published or deleted for that date and was left alone.
+`section` is exactly one of `QUIRKY`, `SERIOUS`, `POLITICS`, `AROUND THE MIDWEST`, `NATIONAL PRESS`, or `TRADE & INDUSTRY`. A markdown header is sent as that same text, so a `POLITICS` header is `"section": "POLITICS"`. `state` is the two-letter code that shows up as "Paper, ST". `url` must be `https`. Each story may include `"is_political": true` or `false`. The flag is stored as true when the section is `POLITICS` or the value is true. At most 100 stories per request. A successful response looks like `{"ok":true,"digest_date":"2026-10-13","inserted":1,"updated":0,"skipped":0}`. `skipped` means that URL was already published or deleted for that date and was left alone. Sending the same pending URL again can turn Politics on, and it leaves an existing on value on.
 
 On the review page, choose a date from the last 7 Chicago days that have stories. The newest of those that still has waiting stories is selected by default, and changing the date loads it right away. **Publish** on a story creates one post: the headline is the title, the link is the URL, and the text is the synopsis plus ` — Paper, ST`. The author is Cornhole News. `is_political` follows that story's Politics checkbox. The story then shows as published, with a link to the new post. Turning Politics on or off after publishing updates the linked post. The checkbox is saved on the queue row, so a reload before publishing keeps it.
 
@@ -269,6 +270,10 @@ accounts that are not admins.
    Run it after the one-story publish file. Existing stories stay untagged.
    `20261016_digest_trade_industry.sql` adds the TRADE & INDUSTRY section.
    Run it after the digest queue file. It does not change stories already saved.
+   `20261020_digest_politics_section.sql` adds the POLITICS section and turns
+   Politics on for that section, or when a story is sent with `is_political`
+   true. Run it after the TRADE & INDUSTRY file and the Politics flag file.
+   A later ingest of the same URL does not turn Politics off.
    Then run these, in this order, before the matching site deploy:
    - `supabase/migrations/20261017_user_bans.sql`
    - `supabase/migrations/20261017_content_guards.sql`
@@ -276,6 +281,7 @@ accounts that are not admins.
    - `supabase/migrations/20261017_privacy_newsletter.sql`
    - `supabase/migrations/20261019_legal_placeholders.sql`
    - `supabase/migrations/20261019_post_rate_limit_scope.sql`
+   - `supabase/migrations/20261020_digest_politics_section.sql`
    The first reserves username `Cornhole_Admin` and adds bans. The second
    limits posts and comments and freezes `created_at`. The third stops
    anonymous writes to the contact, newsletter, and job tables, and to the
@@ -285,6 +291,8 @@ accounts that are not admins.
    sentence to the saved privacy page, and sets the privacy and terms
    dates to October 18, 2026. The sixth keeps the 6-per-hour and 20-per-day
    post caps on signed-in writers, and leaves digest publish outside those caps.
+   The seventh adds the POLITICS digest section. Stories in that section arrive
+   with Politics on, and a later ingest does not turn Politics off.
    Re-running `20261017_content_guards.sql` puts the caps back on digest publish;
    run the sixth file again if you do that. Re-running `20260923_editable_pages.sql`
    after the ban file removes the ban guard. Run `20261017_user_bans.sql` again
