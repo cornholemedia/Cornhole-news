@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { pageMeta } from "@/lib/seo";
@@ -35,5 +36,20 @@ export default async function AdminLayout({
     redirect("/");
   }
 
-  return children;
+  return (
+    <div>
+      <nav aria-label="Admin" className="mx-auto mb-4 flex w-full max-w-3xl flex-wrap gap-x-4 gap-y-1 text-sm">
+        <Link href="/admin" className="text-[#3f679b] hover:underline">
+          Pages
+        </Link>
+        <Link href="/admin/review" className="text-[#3f679b] hover:underline">
+          Digest
+        </Link>
+        <Link href="/admin/ads" className="text-[#3f679b] hover:underline">
+          Ads
+        </Link>
+      </nav>
+      {children}
+    </div>
+  );
 }

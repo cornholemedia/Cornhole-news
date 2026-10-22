@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getPostById } from "@/lib/posts";
 import { formatTimeAgo } from "@/lib/time";
 import Comments from "@/components/Comments";
+import MobileAd from "@/components/MobileAd";
 import AdminPostControls from "@/components/AdminPostControls";
 import PoliticsBadge from "@/components/PoliticsBadge";
 import { postLinkHost, safePostUrl } from "@/lib/post-fields";
@@ -59,6 +60,7 @@ export default async function ItemPage({
 
   return (
     <div>
+      <MobileAd />
       <div className="mb-4">
         <div className="text-lg font-medium text-black">
           {href ? (

@@ -35,6 +35,7 @@ voting, comments).
    - `supabase/migrations/20261019_legal_placeholders.sql`
    - `supabase/migrations/20261019_post_rate_limit_scope.sql`
    - `supabase/migrations/20261020_digest_politics_section.sql`
+   - `supabase/migrations/20261022_ads.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -73,8 +74,10 @@ voting, comments).
    - `NEWSLETTER_UNSUBSCRIBE_SECRET` = a random string, at least 16
      characters. It signs unsubscribe links. If it is unset, the app signs
      those links with `SUPABASE_SERVICE_ROLE_KEY` instead.
-   - `SHOW_ADS` = `true` only when you want the dashed ad boxes to show.
-     Leave it unset until real ads exist. Change it in Vercel, then redeploy.
+   - `SHOW_ADS` = `true` only when you want the ad slots to show. A live ad
+     replaces the dashed placeholder. Leave it unset to hide the slots.
+     Change it in Vercel, then redeploy. Manage creatives at `/admin/ads`
+     after running `supabase/migrations/20261022_ads.sql`.
    - `DIGEST_INGEST_SECRET` = a long random string, at least 16 characters.
      The daily Midwest digest job sends it as `Authorization: Bearer …`.
      The review page does not use this secret.
@@ -169,7 +172,7 @@ redeploys automatically.
 - **Inbox addresses** — an admin can change the contact and jobs inboxes at `/admin`
 - **Newsletter** — the footer has an email signup. Addresses are saved in Supabase. Admins can view them and export a CSV at `/admin`. A confirmation email is sent only when `RESEND_API_KEY` is set.
 - **Signup** — requires a confirmation that the person is at least 13 and agrees to the Terms and Privacy Policy
-- **Ads** — the sidebar placeholders stay hidden unless `SHOW_ADS=true`
+- **Ads** — sidebar and mobile slots stay hidden unless `SHOW_ADS=true`. With that set, a live creative replaces the dashed placeholder. Manage them at `/admin/ads`.
 - **Daily digest** — an automated job can send Midwest stories to `/api/digest/ingest`. They stay hidden until an admin publishes them at `/admin/review`. Published stories are normal posts by Cornhole News. A POLITICS story, or one sent with `is_political` true, arrives with Politics on. Any other story stays off until an admin turns it on. A later send never turns that checkbox off.
 
 ## Daily Midwest digest
@@ -282,6 +285,7 @@ accounts that are not admins.
    - `supabase/migrations/20261019_legal_placeholders.sql`
    - `supabase/migrations/20261019_post_rate_limit_scope.sql`
    - `supabase/migrations/20261020_digest_politics_section.sql`
+   - `supabase/migrations/20261022_ads.sql`
    The first reserves username `Cornhole_Admin` and adds bans. The second
    limits posts and comments and freezes `created_at`. The third stops
    anonymous writes to the contact, newsletter, and job tables, and to the
@@ -293,6 +297,9 @@ accounts that are not admins.
    post caps on signed-in writers, and leaves digest publish outside those caps.
    The seventh adds the POLITICS digest section. Stories in that section arrive
    with Politics on, and a later ingest does not turn Politics off.
+   The eighth adds the ads table, the public `ads` image bucket, and the
+   impression and click counters. Placements are `sidebar_300x250`,
+   `sidebar_300x600`, and `mobile_320x50`.
    Re-running `20261017_content_guards.sql` puts the caps back on digest publish;
    run the sixth file again if you do that. Re-running `20260923_editable_pages.sql`
    after the ban file removes the ban guard. Run `20261017_user_bans.sql` again
@@ -388,7 +395,7 @@ Optional local values in `.env.local`:
 
 - `RESEND_API_KEY` and `CONTACT_FROM_EMAIL` send the form emails. Without the
   Resend key, a saved form still shows a success message.
-- `SHOW_ADS=true` shows the dashed ad boxes. Leave it out to hide them.
+- `SHOW_ADS=true` shows the sidebar and mobile ad slots. A live creative replaces the dashed placeholder. Leave it out to hide the slots.
 - `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` let a local server
   accept a digest. Leave them out and the ingest route answers that it is
   not configured. Do not prefix either name with `NEXT_PUBLIC_`.

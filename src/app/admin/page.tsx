@@ -56,6 +56,20 @@ export default async function AdminPagesIndex() {
         </p>
       </section>
 
+      <section className="mb-8 rounded border border-[#e0e0e0] bg-white p-4" aria-labelledby="ads-admin-heading">
+        <h2 id="ads-admin-heading" className="font-semibold">
+          Ads
+        </h2>
+        <p className="mt-1 text-sm text-[#3a3a3a]">
+          Sidebar and mobile creatives, with impression and click counts.
+        </p>
+        <p className="mt-3 text-sm">
+          <Link href="/admin/ads" className="text-[#3f679b] hover:underline">
+            Manage ads
+          </Link>
+        </p>
+      </section>
+
       <div className="mb-8">
         <SiteSettingsForm
           contactEmail={settings.contactEmail}
