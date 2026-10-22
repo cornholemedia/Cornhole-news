@@ -105,6 +105,7 @@ note: An approved job stays on this page for 30 days.`,
 
 - **Sidebar 300×250** — Standard medium rectangle
 - **Sidebar 300×600** — Tall skyscraper unit
+- **Mobile 320×50** — Phone banner under the header
 
 Interested in advertising? [Contact us](/contact) and we'll get back to you with rates and availability.`,
   },

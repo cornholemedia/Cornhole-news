@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import MobileAd from "@/components/MobileAd";
 import PostList from "@/components/PostList";
 import ShowPoliticsToggle from "@/components/ShowPoliticsToggle";
 import { PAGE_SIZE, getTopPosts } from "@/lib/posts";
@@ -52,6 +53,7 @@ export default async function HomePage({
 
   return (
     <div>
+      <MobileAd />
       <ShowPoliticsToggle showPolitics={showPolitics} />
       <PostList
         posts={posts}

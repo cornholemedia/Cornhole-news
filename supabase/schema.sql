@@ -379,6 +379,7 @@ note: An approved job stays on this page for 30 days.$jobs$
 
 - **Sidebar 300×250** — Standard medium rectangle
 - **Sidebar 300×600** — Tall skyscraper unit
+- **Mobile 320×50** — Phone banner under the header
 
 Interested in advertising? [Contact us](/contact) and we'll get back to you with rates and availability.$advertise$
   ),
@@ -593,6 +594,7 @@ on conflict (slug) do nothing;
 -- so each story can be published on its own, then
 -- 20261015_digest_story_politics.sql for the Politics checkbox and Finished,
 -- then 20261016_digest_trade_industry.sql for the TRADE & INDUSTRY section,
--- then 20261020_digest_politics_section.sql for the POLITICS section.
+-- then 20261020_digest_politics_section.sql for the POLITICS section,
+-- then 20261022_ads.sql for the sidebar and mobile ad slots.
 -- Publishing uses a Cornhole News profile; the steps to create that profile
 -- are at the top of the digest file.
