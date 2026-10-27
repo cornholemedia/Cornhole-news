@@ -1,7 +1,7 @@
 import { isIP } from "node:net";
 import { timingSafeEqual } from "node:crypto";
 
-/** Keep these limits aligned with the digest migrations, including 20261020. */
+/** Keep these limits aligned with the digest migrations, including 20261027. */
 export const DIGEST_SECTIONS = [
   "QUIRKY",
   "SERIOUS",
@@ -26,6 +26,9 @@ export const DIGEST_PUBLISH_ONE_HINT =
 export const DIGEST_POLITICS_HINT =
   "Politics tags and Finished need a database update. In Supabase, open the SQL editor and run supabase/migrations/20261015_digest_story_politics.sql.";
 
+export const DIGEST_TWEET_HINT =
+  "Tweet drafts need a database update. In Supabase, open the SQL editor and run supabase/migrations/20261027_tweet_draft.sql.";
+
 /** How many Chicago calendar days the review date picker offers, including today. */
 export const DIGEST_REVIEW_DAYS = 7;
 
@@ -37,6 +40,7 @@ export const DIGEST_BOT_SETUP =
 export const DIGEST_MAX_STORIES = 100;
 export const DIGEST_MIN_SECRET_LENGTH = 16;
 
+const MAX_TWEET = 280;
 const MAX_HEADLINE = 300;
 const MAX_PAPER = 160;
 const MAX_SYNOPSIS = 2000;
@@ -51,6 +55,7 @@ export type IngestStory = {
   state: string;
   synopsis: string;
   is_political: boolean;
+  tweet_draft: string | null;
 };
 
 export type IngestPayload = {
@@ -130,6 +135,21 @@ export function isDigestSection(value: string): value is DigestSection {
 
 function oneLine(value: string): string {
   return value.replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** Same rules as cleanTweetDraft. Blank becomes null. Raw length, not the X URL weight. */
+function cleanIngestTweet(
+  value: string
+): { ok: true; value: string | null } | { ok: false } {
+  const normalized = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  if (!normalized) return { ok: true, value: null };
+  if (
+    Array.from(normalized).length > MAX_TWEET ||
+    /[\u0000-\u0009\u000B-\u001F\u007F]/.test(normalized)
+  ) {
+    return { ok: false };
+  }
+  return { ok: true, value: normalized };
 }
 
 function storyError(index: number, message: string): string {
@@ -280,7 +300,34 @@ export function parseIngestPayload(
       if (story.is_political) isPolitical = true;
     }
 
-    stories.push({ section, headline, url, paper, state, synopsis, is_political: isPolitical });
+    let tweetDraft: string | null = null;
+    if ("tweet_draft" in story && story.tweet_draft != null) {
+      if (typeof story.tweet_draft !== "string") {
+        return {
+          ok: false,
+          error: storyError(storyNumber, "needs a tweet of 280 characters or fewer."),
+        };
+      }
+      const cleaned = cleanIngestTweet(story.tweet_draft);
+      if (!cleaned.ok) {
+        return {
+          ok: false,
+          error: storyError(storyNumber, "needs a tweet of 280 characters or fewer."),
+        };
+      }
+      tweetDraft = cleaned.value;
+    }
+
+    stories.push({
+      section,
+      headline,
+      url,
+      paper,
+      state,
+      synopsis,
+      is_political: isPolitical,
+      tweet_draft: tweetDraft,
+    });
   }
 
   return { ok: true, value: { digestDate, stories } };
@@ -307,6 +354,10 @@ export function bearerMatches(header: string | null, secret: string): boolean {
 
 export function missingDigestPoliticsColumn(message: string): boolean {
   return /is_political/i.test(message) && /column|schema cache|does not exist/i.test(message);
+}
+
+export function missingDigestTweetColumn(message: string): boolean {
+  return /tweet_draft/i.test(message) && /column|schema cache|does not exist/i.test(message);
 }
 
 export function missingDigestSchema(message: string): boolean {

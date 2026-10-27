@@ -4,7 +4,9 @@ import {
   DIGEST_MIGRATION_HINT,
   DIGEST_POLITICS_HINT,
   DIGEST_SECTIONS,
+  DIGEST_TWEET_HINT,
   missingDigestPoliticsColumn,
+  missingDigestTweetColumn,
   digestPostBody,
   formatDigestDate,
   isDigestSection,
@@ -12,6 +14,7 @@ import {
   missingDigestSchema,
   parseDigestDate,
 } from "@/lib/digest";
+import { digestShareUrl, suggestedTweet } from "@/lib/tweet";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -28,6 +31,7 @@ export type DigestReviewStory = {
   status: "pending" | "published";
   postId: number | null;
   isPolitical: boolean;
+  tweetText: string;
 };
 
 export type DigestReviewGroup = {
@@ -49,6 +53,7 @@ export type DigestReview = {
   pendingCount: number;
   moreWaiting: number;
   politicsReady: boolean;
+  tweetsReady: boolean;
   botReady: boolean;
   botIsAdmin: boolean;
   loadError: string | null;
@@ -71,6 +76,7 @@ type StoryRow = {
   status: string;
   post_id: number | string | null;
   is_political?: boolean | null;
+  tweet_draft?: string | null;
 };
 
 const emptyReview: DigestReview = {
@@ -81,6 +87,7 @@ const emptyReview: DigestReview = {
   pendingCount: 0,
   moreWaiting: 0,
   politicsReady: true,
+  tweetsReady: true,
   botReady: false,
   botIsAdmin: false,
   loadError: null,
@@ -181,6 +188,7 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
       pendingCount: 0,
       moreWaiting: 0,
       politicsReady: true,
+      tweetsReady: true,
       // A failed profile lookup should not pretend the author is missing.
       botReady: Boolean(botResult.error) || Boolean(bot?.id),
       botIsAdmin: Boolean(bot?.is_admin),
@@ -190,48 +198,65 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
     if (!selectedDate) return review;
 
     let politicsReady = true;
-    const first = await supabase
-      .from("digest_stories")
-      .select("id, section, headline, url, paper, state, synopsis, status, post_id, is_political")
-      .eq("digest_date", selectedDate)
-      .in("status", ["pending", "published"])
-      .order("status", { ascending: true })
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .limit(800);
+    let tweetsReady = true;
 
-    let error = first.error;
-    let data = (first.data ?? null) as StoryRow[] | null;
-
-    if (error && missingDigestPoliticsColumn(error.message)) {
-      politicsReady = false;
-      const retry = await supabase
+    const loadStories = (includePolitics: boolean, includeTweet: boolean) => {
+      const columns = [
+        "id",
+        "section",
+        "headline",
+        "url",
+        "paper",
+        "state",
+        "synopsis",
+        "status",
+        "post_id",
+        ...(includePolitics ? ["is_political"] : []),
+        ...(includeTweet ? ["tweet_draft"] : []),
+      ].join(", ");
+      return supabase
         .from("digest_stories")
-        .select("id, section, headline, url, paper, state, synopsis, status, post_id")
+        .select(columns)
         .eq("digest_date", selectedDate)
         .in("status", ["pending", "published"])
         .order("status", { ascending: true })
         .order("created_at", { ascending: true })
         .order("id", { ascending: true })
         .limit(800);
-      error = retry.error;
-      data = (retry.data ?? null) as StoryRow[] | null;
+    };
+
+    let loaded = await loadStories(true, true);
+    if (loaded.error && missingDigestTweetColumn(loaded.error.message)) {
+      tweetsReady = false;
+      loaded = await loadStories(true, false);
     }
+    if (loaded.error && missingDigestPoliticsColumn(loaded.error.message)) {
+      politicsReady = false;
+      tweetsReady = false;
+      loaded = await loadStories(false, false);
+    }
+
+    const error = loaded.error;
+    const data = (loaded.data ?? null) as StoryRow[] | null;
 
     if (error) {
       console.error("Error loading digest stories:", error.message);
       return {
         ...review,
         politicsReady,
-        loadError: missingDigestPoliticsColumn(error.message)
-          ? DIGEST_POLITICS_HINT
-          : missingDigestSchema(error.message)
-            ? DIGEST_MIGRATION_HINT
-            : error.message,
+        tweetsReady,
+        loadError: missingDigestTweetColumn(error.message)
+          ? DIGEST_TWEET_HINT
+          : missingDigestPoliticsColumn(error.message)
+            ? DIGEST_POLITICS_HINT
+            : missingDigestSchema(error.message)
+              ? DIGEST_MIGRATION_HINT
+              : error.message,
       };
     }
 
     review.politicsReady = politicsReady;
+    review.tweetsReady = tweetsReady;
 
     const buckets = new Map<string, DigestReviewStory[]>();
     for (const section of DIGEST_SECTIONS) buckets.set(section, []);
@@ -239,14 +264,25 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
     for (const row of data ?? []) {
       if (row.status !== "pending" && row.status !== "published") continue;
       const postId = row.post_id == null ? null : Number(row.post_id);
+      const storyPostId =
+        postId != null && Number.isInteger(postId) && postId > 0 ? postId : null;
       const story: DigestReviewStory = {
         id: row.id,
         headline: row.headline,
         url: row.url,
         body: digestPostBody(row.synopsis, row.paper, row.state),
         status: row.status,
-        postId: postId != null && Number.isInteger(postId) && postId > 0 ? postId : null,
+        postId: storyPostId,
         isPolitical: politicsReady && row.is_political === true,
+        tweetText: suggestedTweet(
+          tweetsReady ? row.tweet_draft : null,
+          row.headline,
+          digestShareUrl({
+            status: row.status,
+            postId: storyPostId,
+            sourceUrl: row.url,
+          })
+        ),
       };
       const key = isDigestSection(row.section) ? row.section : row.section;
       const list = buckets.get(key) ?? [];

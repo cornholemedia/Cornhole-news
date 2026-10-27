@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import DigestReview from "@/components/DigestReview";
-import { DIGEST_BOT_SETUP, DIGEST_POLITICS_HINT } from "@/lib/digest";
+import { DIGEST_BOT_SETUP, DIGEST_POLITICS_HINT, DIGEST_TWEET_HINT } from "@/lib/digest";
 import { getDigestReview } from "@/lib/digest-review";
 import { pageMeta } from "@/lib/seo";
 
@@ -27,7 +27,8 @@ export default async function AdminDigestReviewPage({
       <h1 className="mb-2 text-2xl font-bold">Review digest</h1>
       <p className="mb-3 text-[15px] leading-relaxed text-[#666]">
         Stories from the daily Midwest digest wait here. Nothing is posted until you
-        publish it. Politics tags that one post, and stays off unless you turn it on.
+        publish it. Each story has a tweet you can edit, copy, or open on X. Politics
+        tags that one post, and stays off unless you turn it on.
         Delete removes one story. Finished removes every story still waiting for the
         date you are viewing and leaves published stories up. The date list is the
         last 7 days in Chicago time. A later send of a deleted link will not put it
@@ -69,6 +70,12 @@ export default async function AdminDigestReviewPage({
       {!review.loadError && review.selectedDate && !review.politicsReady ? (
         <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-sm text-[#1a1a1a]">
           {DIGEST_POLITICS_HINT}
+        </p>
+      ) : null}
+
+      {!review.loadError && review.selectedDate && !review.tweetsReady ? (
+        <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-sm text-[#1a1a1a]">
+          {DIGEST_TWEET_HINT}
         </p>
       ) : null}
 

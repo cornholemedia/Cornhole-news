@@ -55,6 +55,7 @@ test("ingest payload accepts one date of stories and rejects bad rows", () => {
   assert.equal(good.value.stories[0]?.state, "IA");
   assert.equal(good.value.stories[0]?.section, "QUIRKY");
   assert.equal(good.value.stories[0]?.is_political, false);
+  assert.equal(good.value.stories[0]?.tweet_draft, null);
   assert.equal(
     parseIngestPayload({
       digest_date: "2026-10-13",
@@ -347,4 +348,117 @@ test("the review date list is the last 7 Chicago days", () => {
   assert.equal(afterChicagoMidnight[0], "2026-10-16");
   assert.equal(afterChicagoMidnight[6], "2026-10-10");
   assert.equal(afterChicagoMidnight.length, 7);
+});
+
+test("ingest stores an optional tweet_draft and leaves a saved one alone", () => {
+  const tweetMigration = readFileSync(
+    new URL("../../supabase/migrations/20261027_tweet_draft.sql", import.meta.url),
+    "utf8"
+  );
+  const actions = readFileSync(new URL("../app/admin/review/actions.ts", import.meta.url), "utf8");
+  const reviewUi = readFileSync(new URL("../components/TweetDraftField.tsx", import.meta.url), "utf8");
+
+  const trimmed = parseIngestPayload({
+    digest_date: "2026-10-27",
+    stories: [{ ...story, tweet_draft: "  Bags in.  " }],
+  });
+  assert.equal(trimmed.ok, true);
+  if (trimmed.ok) assert.equal(trimmed.value.stories[0]?.tweet_draft, "Bags in.");
+
+  const blank = parseIngestPayload({
+    digest_date: "2026-10-27",
+    stories: [{ ...story, url: "https://example.com/blank-tweet", tweet_draft: "   " }],
+  });
+  assert.equal(blank.ok, true);
+  if (blank.ok) assert.equal(blank.value.stories[0]?.tweet_draft, null);
+
+  const omitted = parseIngestPayload({
+    digest_date: "2026-10-27",
+    stories: [{ ...story, url: "https://example.com/no-tweet" }],
+  });
+  assert.equal(omitted.ok, true);
+  if (omitted.ok) assert.equal(omitted.value.stories[0]?.tweet_draft, null);
+
+  const withNewline = parseIngestPayload({
+    digest_date: "2026-10-27",
+    stories: [{ ...story, url: "https://example.com/newline-tweet", tweet_draft: "Line one\r\nLine two" }],
+  });
+  assert.equal(withNewline.ok, true);
+  if (withNewline.ok) assert.equal(withNewline.value.stories[0]?.tweet_draft, "Line one\nLine two");
+
+  assert.equal(
+    parseIngestPayload({
+      digest_date: "2026-10-27",
+      stories: [{ ...story, url: "https://example.com/long-tweet", tweet_draft: "a".repeat(281) }],
+    }).ok,
+    false
+  );
+  assert.equal(
+    parseIngestPayload({
+      digest_date: "2026-10-27",
+      stories: [{ ...story, url: "https://example.com/bad-tweet", tweet_draft: 12 }],
+    }).ok,
+    false
+  );
+  assert.equal(
+    parseIngestPayload({
+      digest_date: "2026-10-27",
+      stories: [{ ...story, url: "https://example.com/null-tweet", tweet_draft: null }],
+    }).ok,
+    true
+  );
+
+  const politicsStillOn = parseIngestPayload({
+    digest_date: "2026-10-27",
+    stories: [
+      {
+        ...story,
+        section: "POLITICS",
+        url: "https://example.com/politics-tweet",
+        is_political: false,
+        tweet_draft: "Capitol notes",
+      },
+    ],
+  });
+  assert.equal(politicsStillOn.ok, true);
+  if (politicsStillOn.ok) {
+    assert.equal(politicsStillOn.value.stories[0]?.is_political, true);
+    assert.equal(politicsStillOn.value.stories[0]?.tweet_draft, "Capitol notes");
+  }
+
+  assert.match(tweetMigration, /add column if not exists tweet_draft text/);
+  assert.match(tweetMigration, /tweet_draft = coalesce\(d\.tweet_draft, i\.tweet_draft\)/);
+  assert.match(tweetMigration, /is_political = d\.is_political or i\.is_political/);
+  assert.equal(/set is_political = false/.test(tweetMigration), false);
+  assert.match(tweetMigration, /'POLITICS'/);
+  assert.match(
+    tweetMigration,
+    /grant execute on function public\.ingest_digest_stories\(date, jsonb\) to service_role/
+  );
+  assert.equal(
+    /grant execute on function public\.ingest_digest_stories\(date, jsonb\) to (anon|authenticated)/.test(
+      tweetMigration
+    ),
+    false
+  );
+  assert.match(
+    tweetMigration,
+    /grant execute on function public\.set_digest_story_tweet_draft\(uuid, text\) to authenticated/
+  );
+  assert.equal(
+    /grant execute on function public\.set_digest_story_tweet_draft\(uuid, text\) to (anon|service_role)/.test(
+      tweetMigration
+    ),
+    false
+  );
+  assert.match(tweetMigration, /if not \(select public\.is_admin\(\)\) then/);
+  assert.match(actions, /set_digest_story_tweet_draft/);
+  assert.match(actions, /adminClient/);
+  assert.match(reviewUi, /<textarea/);
+  assert.match(reviewUi, /"Copy"/);
+  assert.match(reviewUi, /Post on X/);
+  assert.match(reviewUi, /rel="noopener"/);
+  assert.equal(reviewUi.includes('rel="noopener noreferrer"'), false);
+  assert.match(reviewUi, /target="_blank"/);
+  assert.match(reviewUi, /xIntentUrl/);
 });

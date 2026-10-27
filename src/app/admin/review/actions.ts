@@ -5,9 +5,11 @@ import {
   DIGEST_MIGRATION_HINT,
   DIGEST_POLITICS_HINT,
   DIGEST_PUBLISH_ONE_HINT,
+  DIGEST_TWEET_HINT,
   missingDigestSchema,
   parseDigestDate,
 } from "@/lib/digest";
+import { cleanTweetDraft } from "@/lib/tweet";
 import { createClient } from "@/lib/supabase/server";
 
 export type DigestActionResult =
@@ -55,6 +57,12 @@ function actionError(error: { message: string; code?: string }): string {
   }
   if (/is_political/i.test(error.message) && missingDigestSchema(error.message)) {
     return DIGEST_POLITICS_HINT;
+  }
+  if (
+    /tweet_draft|set_digest_story_tweet_draft/i.test(error.message) &&
+    /column|schema cache|does not exist|function/i.test(error.message)
+  ) {
+    return DIGEST_TWEET_HINT;
   }
   if (/publish_digest_story/i.test(error.message)) return DIGEST_PUBLISH_ONE_HINT;
   if (missingDigestSchema(error.message)) return DIGEST_MIGRATION_HINT;
@@ -158,6 +166,35 @@ export async function setDigestStoryPolitics(
     message: postId != null ? "Updated the post." : "Saved.",
     postId: postId ?? undefined,
   };
+}
+
+export async function saveDigestTweetDraft(
+  id: string,
+  text: string
+): Promise<DigestActionResult> {
+  if (!STORY_ID.test(id) || typeof text !== "string") {
+    return { ok: false, error: "That story could not be found." };
+  }
+
+  const cleaned = cleanTweetDraft(text);
+  if (!cleaned.ok) return { ok: false, error: cleaned.error };
+
+  const { supabase, error } = await adminClient();
+  if (error || !supabase) {
+    return { ok: false, error: error ?? "You need an admin account to do that." };
+  }
+
+  const { error: saveError } = await supabase.rpc("set_digest_story_tweet_draft", {
+    p_id: id,
+    p_tweet_draft: cleaned.value,
+  });
+
+  if (saveError) {
+    console.error("Could not save a digest tweet:", saveError.message);
+    return { ok: false, error: actionError(saveError) };
+  }
+
+  return { ok: true, message: "Saved." };
 }
 
 export async function deletePendingDigestStories(date: string): Promise<DigestActionResult> {

@@ -595,6 +595,7 @@ on conflict (slug) do nothing;
 -- 20261015_digest_story_politics.sql for the Politics checkbox and Finished,
 -- then 20261016_digest_trade_industry.sql for the TRADE & INDUSTRY section,
 -- then 20261020_digest_politics_section.sql for the POLITICS section,
--- then 20261022_ads.sql for the sidebar and mobile ad slots.
+-- then 20261022_ads.sql for the sidebar and mobile ad slots,
+-- then 20261027_tweet_draft.sql for the optional tweet on each digest story.
 -- Publishing uses a Cornhole News profile; the steps to create that profile
 -- are at the top of the digest file.
