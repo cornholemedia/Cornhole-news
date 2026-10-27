@@ -10,6 +10,7 @@ import {
   setDigestStoryPolitics,
   type DigestActionResult,
 } from "@/app/admin/review/actions";
+import TweetDraftField from "@/components/TweetDraftField";
 
 type ReviewStory = {
   id: string;
@@ -19,6 +20,7 @@ type ReviewStory = {
   status: "pending" | "published";
   postId: number | null;
   isPolitical: boolean;
+  tweetText: string;
 };
 
 type ReviewGroup = {
@@ -260,6 +262,7 @@ export default function DigestReview({
                     <p className="mt-2 text-sm leading-relaxed wrap-break-word text-[#1a1a1a]">
                       {story.body}
                     </p>
+                    <TweetDraftField storyId={story.id} initialText={story.tweetText} />
                     <div className="mt-3 flex flex-wrap items-center gap-3">
                       <label
                         htmlFor={`politics-${story.id}`}
