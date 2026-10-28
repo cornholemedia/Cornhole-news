@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getSitemapJobPostings } from "@/lib/job-postings";
 import { getSitemapPosts } from "@/lib/posts";
-import { getSiteUrl } from "@/lib/site";
+import { advertiseEnabled, getSiteUrl } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();
   const [posts, jobs] = await Promise.all([getSitemapPosts(), getSitemapJobPostings()]);
 
-  const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.map((path) => ({
+  const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.filter(
+    (path) => path !== "/advertise" || advertiseEnabled()
+  ).map((path) => ({
     url: path === "/" ? siteUrl : `${siteUrl}${path}`,
     changeFrequency: path === "/" || path === "/new" ? "hourly" : "weekly",
     priority: path === "/" ? 1 : 0.7,

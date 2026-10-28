@@ -1,26 +1,26 @@
 import Link from "next/link";
 import AdImpression from "@/components/AdImpression";
-import { type AdPlacement } from "@/lib/ads";
-import { getCurrentAd } from "@/lib/ads-server";
-import { adsEnabled } from "@/lib/site";
+import { type LiveAd } from "@/lib/ads";
+import { adsEnabled, advertiseEnabled } from "@/lib/site";
 
-export default async function AdSlot({
-  placement,
+export default function AdSlot({
   width,
   height,
   layout,
+  ad,
   advertiseLink = false,
 }: {
-  placement: AdPlacement;
   width: number;
   height: number;
   layout: "sidebar" | "banner";
+  ad: LiveAd | null;
   advertiseLink?: boolean;
 }) {
   if (!adsEnabled()) return null;
+  if (!ad && !advertiseEnabled()) return null;
 
-  const ad = await getCurrentAd(placement);
   const banner = layout === "banner";
+  const showAdvertiseLink = advertiseLink && advertiseEnabled();
 
   return (
     <div
@@ -64,7 +64,7 @@ export default async function AdSlot({
           </span>
         </div>
       )}
-      {advertiseLink ? (
+      {showAdvertiseLink ? (
         <p className="mt-2 text-xs text-[#3f679b]">
           <Link href="/advertise" className="hover:underline">
             Advertise with us

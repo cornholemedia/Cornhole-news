@@ -7,6 +7,7 @@ import { getJobPostingsForAdmin } from "@/lib/job-postings";
 import { getNewsletterSubscribersForAdmin } from "@/lib/newsletter";
 import { getPagesForAdmin } from "@/lib/pages";
 import { getSiteSettingsForAdmin } from "@/lib/site-settings";
+import { advertiseEnabled } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -128,9 +129,11 @@ export default async function AdminPagesIndex() {
               >
                 Edit
               </Link>
-              <Link href={`/${page.slug}`} className="text-[#3f679b] hover:underline">
-                View
-              </Link>
+              {page.slug !== "advertise" || advertiseEnabled() ? (
+                <Link href={`/${page.slug}`} className="text-[#3f679b] hover:underline">
+                  View
+                </Link>
+              ) : null}
             </p>
           </div>
         ))}

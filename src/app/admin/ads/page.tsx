@@ -22,7 +22,8 @@ export default async function AdminAdsPage() {
       <p className="mb-3 text-[15px] leading-relaxed text-[#666]">
         Put a creative in the sidebar or the phone banner. A slot with more than one
         live ad picks one at random. Turn Active off, or set dates, to stop it. An
-        empty slot shows the dashed placeholder. The boxes stay hidden until{" "}
+        empty slot shows the dashed placeholder when{" "}
+        <code>NEXT_PUBLIC_SHOW_ADVERTISE=true</code>. Live ads stay hidden until{" "}
         <code>SHOW_ADS=true</code>.
       </p>
       <p className="mb-6 text-sm">

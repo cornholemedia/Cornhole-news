@@ -34,7 +34,15 @@ export function getSiteUrl(): string {
   }
 }
 
-/** Dashed ad boxes stay hidden until this server env var is exactly "true". */
+/** Live ad slots stay hidden until this server env var is exactly "true". */
 export function adsEnabled(): boolean {
   return process.env.SHOW_ADS === "true";
+}
+
+/**
+ * Advertise links, the /advertise page, and empty ad placeholders stay hidden
+ * unless this is exactly "true". Unset means hidden.
+ */
+export function advertiseEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_SHOW_ADVERTISE === "true";
 }
