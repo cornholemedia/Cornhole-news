@@ -75,10 +75,13 @@ voting, comments).
    - `NEWSLETTER_UNSUBSCRIBE_SECRET` = a random string, at least 16
      characters. It signs unsubscribe links. If it is unset, the app signs
      those links with `SUPABASE_SERVICE_ROLE_KEY` instead.
-   - `SHOW_ADS` = `true` only when you want the ad slots to show. A live ad
-     replaces the dashed placeholder. Leave it unset to hide the slots.
-     Change it in Vercel, then redeploy. Manage creatives at `/admin/ads`
-     after running `supabase/migrations/20261022_ads.sql`.
+   - `SHOW_ADS` = `true` only when you want a live ad to show. Leave it
+     unset to hide live ads. Change it in Vercel, then redeploy. Manage
+     creatives at `/admin/ads` after running `supabase/migrations/20261022_ads.sql`.
+   - `NEXT_PUBLIC_SHOW_ADVERTISE` = `true` only when you want the Advertise
+     link, the `/advertise` page, and empty ad placeholders. Leave it unset
+     to hide them. A live ad can still show when `SHOW_ADS=true`. Change it
+     in Vercel, then redeploy.
    - `DIGEST_INGEST_SECRET` = a long random string, at least 16 characters.
      The daily Midwest digest job sends it as `Authorization: Bearer …`.
      The review page does not use this secret.
@@ -173,7 +176,7 @@ redeploys automatically.
 - **Inbox addresses** — an admin can change the contact and jobs inboxes at `/admin`
 - **Newsletter** — the footer has an email signup. Addresses are saved in Supabase. Admins can view them and export a CSV at `/admin`. A confirmation email is sent only when `RESEND_API_KEY` is set.
 - **Signup** — requires a confirmation that the person is at least 13 and agrees to the Terms and Privacy Policy
-- **Ads** — sidebar and mobile slots stay hidden unless `SHOW_ADS=true`. With that set, a live creative replaces the dashed placeholder. Manage them at `/admin/ads`.
+- **Ads** — a live creative shows only when `SHOW_ADS=true`. Empty placeholders, the Advertise link, and `/advertise` stay hidden unless `NEXT_PUBLIC_SHOW_ADVERTISE=true`. Manage creatives at `/admin/ads`.
 - **Daily digest** — an automated job can send Midwest stories to `/api/digest/ingest`. They stay hidden until an admin publishes them at `/admin/review`. Published stories are normal posts by Cornhole News. A POLITICS story, or one sent with `is_political` true, arrives with Politics on. Any other story stays off until an admin turns it on. A later send never turns that checkbox off.
 
 ## Daily Midwest digest
@@ -401,7 +404,8 @@ Optional local values in `.env.local`:
 
 - `RESEND_API_KEY` and `CONTACT_FROM_EMAIL` send the form emails. Without the
   Resend key, a saved form still shows a success message.
-- `SHOW_ADS=true` shows the sidebar and mobile ad slots. A live creative replaces the dashed placeholder. Leave it out to hide the slots.
+- `SHOW_ADS=true` shows a live sidebar or mobile ad. Leave it out to hide live ads.
+- `NEXT_PUBLIC_SHOW_ADVERTISE=true` shows the Advertise link, `/advertise`, and empty ad placeholders. Leave it out to hide them.
 - `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` let a local server
   accept a digest. Leave them out and the ingest route answers that it is
   not configured. Do not prefix either name with `NEXT_PUBLIC_`.

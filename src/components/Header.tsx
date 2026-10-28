@@ -30,7 +30,14 @@ function MenuIcon({ open }: { open: boolean }) {
   );
 }
 
-export default function Header({ logoSrc }: { logoSrc: string | null }) {
+export default function Header({
+  logoSrc,
+  showAdvertise = false,
+}: {
+  logoSrc: string | null;
+  showAdvertise?: boolean;
+}) {
+  const items = navItems.filter((item) => showAdvertise || item.href !== "/advertise");
   const supabase = createClient();
   const router = useRouter();
   const pathname = usePathname();
@@ -167,7 +174,7 @@ export default function Header({ logoSrc }: { logoSrc: string | null }) {
             aria-label="Main"
             className="hidden items-center gap-1 text-sm font-medium lg:flex lg:gap-2 lg:text-base"
           >
-            {navItems.map((item, index) => (
+            {items.map((item, index) => (
               <span key={item.href} className="flex items-center">
                 {index > 0 && <span className="mx-1 text-[#3f679b]/50">|</span>}
                 <Link href={item.href} className="text-[#3f679b] hover:underline">
@@ -190,7 +197,7 @@ export default function Header({ logoSrc }: { logoSrc: string | null }) {
           aria-label="Main"
           className={`${menuOpen ? "flex" : "hidden"} mt-3 flex-col gap-1 border-t border-[#3f679b]/25 pt-2 text-base font-medium lg:hidden`}
         >
-          {navItems.map((item) => (
+          {items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
