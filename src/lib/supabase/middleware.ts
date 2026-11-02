@@ -1,10 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { adminMfaRedirect, adminMfaRequired } from "@/lib/admin-mfa";
 import { safeNextPath } from "@/lib/safe-next";
 
 export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  request.headers.set("x-pathname", request.nextUrl.pathname);
+
   if (!supabaseUrl || !supabaseKey) {
     return NextResponse.next({ request });
   }
@@ -59,6 +62,27 @@ export async function updateSession(request: NextRequest) {
     if (!profile?.is_admin) {
       redirectUrl.pathname = "/";
       redirectUrl.search = "";
+      return redirectKeepingSession(redirectUrl, supabaseResponse);
+    }
+
+    const { data: assurance, error: assuranceError } =
+      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const assuranceKnown = !assuranceError && assurance != null;
+    if (assuranceError) {
+      console.error("Could not read authenticator assurance:", assuranceError.message);
+    }
+    const target = adminMfaRedirect({
+      pathname: request.nextUrl.pathname,
+      search: request.nextUrl.search,
+      currentLevel: assurance?.currentLevel === "aal2" ? "aal2" : "aal1",
+      hasVerifiedFactor: assurance?.nextLevel === "aal2",
+      requireEnrollment: adminMfaRequired(),
+      assuranceKnown,
+    });
+    if (target) {
+      const destination = new URL(target, request.nextUrl.origin);
+      redirectUrl.pathname = destination.pathname;
+      redirectUrl.search = destination.search;
       return redirectKeepingSession(redirectUrl, supabaseResponse);
     }
   }
