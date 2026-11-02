@@ -1,5 +1,7 @@
 "use server";
 
+import { adminMfaRequired, loginRedirectAfterPassword } from "@/lib/admin-mfa";
+import { readAdminAssurance } from "@/lib/admin-session";
 import { fieldValue } from "@/lib/form-fields";
 import { safeNextPath } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase/server";
@@ -24,14 +26,33 @@ export async function signInAccount(
 
   try {
     const supabase = await createClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
       options: { captchaToken: captcha.captchaToken },
     });
 
     if (error) return { ok: false, error: error.message };
-    return { ok: true, next: safeNextPath(fieldValue(formData.get("next"))) };
+
+    const requestedNext = safeNextPath(fieldValue(formData.get("next")));
+    const userId = data.user?.id;
+    const [{ data: profile }, assurance] = await Promise.all([
+      userId
+        ? supabase.from("profiles").select("is_admin").eq("id", userId).maybeSingle()
+        : Promise.resolve({ data: null }),
+      readAdminAssurance(supabase),
+    ]);
+
+    return {
+      ok: true,
+      next: loginRedirectAfterPassword({
+        requestedNext,
+        isAdmin: profile?.is_admin === true,
+        currentLevel: assurance.currentLevel,
+        hasVerifiedFactor: assurance.assuranceKnown && assurance.hasVerifiedFactor,
+        requireEnrollment: adminMfaRequired(),
+      }),
+    };
   } catch (error) {
     console.error("Login failed:", error instanceof Error ? error.message : "unknown error");
     return { ok: false, error: "Could not log in. Please try again." };

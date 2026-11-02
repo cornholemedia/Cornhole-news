@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BackToTop from "@/components/BackToTop";
 import DigestReview from "@/components/DigestReview";
 import { DIGEST_BOT_SETUP, DIGEST_POLITICS_HINT, DIGEST_TWEET_HINT } from "@/lib/digest";
 import { getDigestReview } from "@/lib/digest-review";
@@ -23,7 +24,7 @@ export default async function AdminDigestReviewPage({
   const review = await getDigestReview(date);
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl pr-36 pb-20">
       <h1 className="mb-2 text-2xl font-bold">Review digest</h1>
       <p className="mb-3 text-[15px] leading-relaxed text-[#666]">
         Stories from the daily Midwest digest wait here. Nothing is posted until you
@@ -91,6 +92,7 @@ export default async function AdminDigestReviewPage({
           botReady={review.botReady}
         />
       ) : null}
+      <BackToTop />
     </div>
   );
 }

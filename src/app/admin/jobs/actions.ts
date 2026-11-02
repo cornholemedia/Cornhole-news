@@ -3,32 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { FORM_SAVE_ERROR, fieldValue, type FormStatus } from "@/lib/form-fields";
 import { expiresFromAdminDate, isJobId, postingFieldsFromForm } from "@/lib/job-postings";
-import { createClient } from "@/lib/supabase/server";
+import { adminClient } from "@/lib/admin-session";
 
 export type AdminActionResult = { ok: true } | { ok: false; error: string };
-
-async function adminClient(): Promise<
-  | { supabase: Awaited<ReturnType<typeof createClient>>; error: null }
-  | { supabase: null; error: string }
-> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { supabase: null, error: "Sign in as an admin to do that." };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile?.is_admin) {
-    return { supabase: null, error: "You need an admin account to do that." };
-  }
-
-  return { supabase, error: null };
-}
 
 function revalidateJob(id?: string) {
   revalidatePath("/jobs");

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { pageMeta } from "@/lib/seo";
@@ -22,8 +23,11 @@ export default async function AdminLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const pathname = (await headers()).get("x-pathname") ?? "";
+
   if (!user) {
-    redirect("/login?next=/admin");
+    const next = pathname.startsWith("/admin") ? pathname : "/admin";
+    redirect(`/login?next=${encodeURIComponent(next)}`);
   }
 
   const { data: profile } = await supabase
@@ -38,17 +42,22 @@ export default async function AdminLayout({
 
   return (
     <div>
-      <nav aria-label="Admin" className="mx-auto mb-4 flex w-full max-w-3xl flex-wrap gap-x-4 gap-y-1 text-sm">
-        <Link href="/admin" className="text-[#3f679b] hover:underline">
-          Pages
-        </Link>
-        <Link href="/admin/review" className="text-[#3f679b] hover:underline">
-          Digest
-        </Link>
-        <Link href="/admin/ads" className="text-[#3f679b] hover:underline">
-          Ads
-        </Link>
-      </nav>
+      {pathname === "/admin/mfa" ? null : (
+        <nav aria-label="Admin" className="mx-auto mb-4 flex w-full max-w-3xl flex-wrap gap-x-4 gap-y-1 text-sm">
+          <Link href="/admin" className="text-[#3f679b] hover:underline">
+            Pages
+          </Link>
+          <Link href="/admin/review" className="text-[#3f679b] hover:underline">
+            Digest
+          </Link>
+          <Link href="/admin/ads" className="text-[#3f679b] hover:underline">
+            Ads
+          </Link>
+          <Link href="/admin/security" className="text-[#3f679b] hover:underline">
+            Security
+          </Link>
+        </nav>
+      )}
       {children}
     </div>
   );

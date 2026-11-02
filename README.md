@@ -37,6 +37,7 @@ voting, comments).
    - `supabase/migrations/20261020_digest_politics_section.sql`
    - `supabase/migrations/20261022_ads.sql`
    - `supabase/migrations/20261027_tweet_draft.sql`
+   - `supabase/migrations/20261102_admin_mfa_aal.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -81,6 +82,13 @@ voting, comments).
    - `NEXT_PUBLIC_SHOW_ADVERTISE` = `true` only when you want the Advertise
      link, the `/advertise` page, and empty ad placeholders. Leave it unset
      to hide them. A live ad can still show when `SHOW_ADS=true`. Change it
+     in Vercel, then redeploy.
+   - `ADMIN_REQUIRE_MFA` = `true` only after each admin has set up an
+     authenticator app at `/admin/security`. Leave it unset so an admin who
+     has not enrolled can still use the admin pages. An admin who has already
+     enrolled must enter the 6-digit code after their password. TOTP is on
+     by default in Supabase Authentication. If setup says it is turned off,
+     open Authentication → Multi-Factor and enable TOTP. Change the variable
      in Vercel, then redeploy.
    - `DIGEST_INGEST_SECRET` = a long random string, at least 16 characters.
      The daily Midwest digest job sends it as `Authorization: Bearer …`.
@@ -293,6 +301,7 @@ accounts that are not admins.
    - `supabase/migrations/20261020_digest_politics_section.sql`
    - `supabase/migrations/20261022_ads.sql`
    - `supabase/migrations/20261027_tweet_draft.sql`
+   - `supabase/migrations/20261102_admin_mfa_aal.sql`
    The first reserves username `Cornhole_Admin` and adds bans. The second
    limits posts and comments and freezes `created_at`. The third stops
    anonymous writes to the contact, newsletter, and job tables, and to the
@@ -309,6 +318,9 @@ accounts that are not admins.
    `sidebar_300x600`, and `mobile_320x50`.
    The ninth adds `tweet_draft` on digest stories. The review page can edit
    that text, and a later ingest leaves a saved tweet in place.
+   The tenth keeps admin database writes open until that admin has a verified
+   authenticator. After that, `is_admin()` is true only for an aal2 session.
+   Digest ingest is unchanged.
    Re-running `20261017_content_guards.sql` puts the caps back on digest publish;
    run the sixth file again if you do that. Re-running `20260923_editable_pages.sql`
    after the ban file removes the ban guard. Run `20261017_user_bans.sql` again
@@ -406,6 +418,7 @@ Optional local values in `.env.local`:
   Resend key, a saved form still shows a success message.
 - `SHOW_ADS=true` shows a live sidebar or mobile ad. Leave it out to hide live ads.
 - `NEXT_PUBLIC_SHOW_ADVERTISE=true` shows the Advertise link, `/advertise`, and empty ad placeholders. Leave it out to hide them.
+- `ADMIN_REQUIRE_MFA=true` sends admins who have not enrolled an authenticator app to `/admin/security`. Leave it out until that app is set up.
 - `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` let a local server
   accept a digest. Leave them out and the ingest route answers that it is
   not configured. Do not prefix either name with `NEXT_PUBLIC_`.

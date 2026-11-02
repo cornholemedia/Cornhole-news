@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { adminClient } from "@/lib/admin-session";
 
 export async function setUserBanned(
   userId: string,
@@ -12,7 +12,13 @@ export async function setUserBanned(
     return { ok: false, error: "That account was not found." };
   }
 
-  const supabase = await createClient();
+  const gate = await adminClient();
+  if (gate.error || !gate.supabase) {
+    if (gate.error && /authenticator/i.test(gate.error)) return { ok: false, error: gate.error };
+    return { ok: false, error: "You cannot change that account." };
+  }
+
+  const supabase = gate.supabase;
   const { error } = await supabase.rpc("set_profile_banned", {
     p_user_id: userId,
     p_banned: banned,
