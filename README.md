@@ -173,7 +173,7 @@ redeploys automatically.
 
 - **Accounts** — sign up / log in / log out / forgot password (Supabase Auth, email + password)
 - **Submitting posts** — logged-in users can submit a link or text post (`/submit`)
-- **Voting** — logged-in users can upvote/un-upvote any post
+- **Voting** — logged-in users can upvote/un-upvote any post. On Top, only stories from the last 72 hours compete for the highest spots. Older stories keep their votes and still appear below that group, on New, and on their own page.
 - **Comments** — logged-in users can comment on any post
 - **Top / New** — real ranked lists pulled from the database, not mock data
 - **Politics tag** — authors and admins can mark a post as political when they submit or edit it. Tagged posts show a small Politics badge. The home page has a Show politics switch (on by default). The choice is remembered in the browser, and on the account when someone is signed in.
@@ -373,7 +373,7 @@ src/
   lib/posts.ts               → data-fetching for top/new posts
   lib/time.ts                → "x minutes ago" formatting
   app/
-    page.tsx                 → Top (ranked by votes)
+    page.tsx                 → Top (votes, stories older than 72 hours below newer ones)
     new/page.tsx              → New (ranked by time)
     item/[id]/page.tsx        → single post + comments
     user/[username]/page.tsx  → public profile + their submissions

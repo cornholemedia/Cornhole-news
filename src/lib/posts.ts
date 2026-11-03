@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { topStoryCutoff } from "@/lib/top-stories";
 
 export type PostWithStats = {
   id: number;
@@ -26,23 +27,50 @@ type TopPostOptions = {
 export async function getTopPosts(limit = PAGE_SIZE, options?: TopPostOptions): Promise<PostWithStats[]> {
   const supabase = await createClient();
   const offset = Math.max(0, Math.floor(options?.offset ?? 0));
-  let query = supabase.from("posts_with_stats").select("*");
+  const cutoff = topStoryCutoff();
+  const hidePolitics = options?.showPolitics === false;
 
-  if (options?.showPolitics === false) {
-    query = query.eq("is_political", false);
-  }
-
-  const { data, error } = await query
-    .order("points", { ascending: false })
-    .order("created_at", { ascending: false })
-    // range() is inclusive, so a full page of 30 ends at offset + 29.
-    .range(offset, offset + limit - 1);
-
-  if (error) {
-    console.error("Error fetching top posts:", error.message);
+  let countQuery = supabase.from("posts_with_stats").select("id", { count: "exact", head: true });
+  if (hidePolitics) countQuery = countQuery.eq("is_political", false);
+  const { count, error: countError } = await countQuery.gt("created_at", cutoff);
+  if (countError) {
+    console.error("Error fetching top posts:", countError.message);
     return [];
   }
-  return data ?? [];
+
+  const freshCount = count ?? 0;
+
+  async function page(fresh: boolean, start: number, size: number): Promise<PostWithStats[] | null> {
+    if (size <= 0) return [];
+    let query = supabase.from("posts_with_stats").select("*");
+    if (hidePolitics) query = query.eq("is_political", false);
+    query = fresh ? query.gt("created_at", cutoff) : query.lte("created_at", cutoff);
+    const { data, error } = await query
+      .order("points", { ascending: false })
+      .order("created_at", { ascending: false })
+      // range() is inclusive, so a full page of 30 ends at start + size - 1.
+      .range(start, start + size - 1);
+    if (error) {
+      console.error("Error fetching top posts:", error.message);
+      return null;
+    }
+    return data ?? [];
+  }
+
+  // Stories from the last 72 hours fill the top of the ranking. Older stories
+  // keep their points and follow that whole group, including on later pages.
+  if (offset >= freshCount) {
+    return (await page(false, offset - freshCount, limit)) ?? [];
+  }
+  if (offset + limit <= freshCount) {
+    return (await page(true, offset, limit)) ?? [];
+  }
+
+  const freshRows = await page(true, offset, freshCount - offset);
+  if (!freshRows) return [];
+  const oldRows = await page(false, 0, limit - freshRows.length);
+  if (!oldRows) return freshRows;
+  return [...freshRows, ...oldRows];
 }
 
 export async function getNewPosts(limit = 30): Promise<PostWithStats[]> {
