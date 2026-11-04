@@ -46,3 +46,17 @@ export function adsEnabled(): boolean {
 export function advertiseEnabled(): boolean {
   return process.env.NEXT_PUBLIC_SHOW_ADVERTISE === "true";
 }
+
+/** Merch stays out of the nav unless the flag is exactly "true" and the URL is http(s). */
+export function publicMerchHref(): string | null {
+  if (process.env.NEXT_PUBLIC_SHOW_MERCH !== "true") return null;
+  const raw = process.env.NEXT_PUBLIC_MERCH_URL?.trim() ?? "";
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    if (url.username || url.password) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}

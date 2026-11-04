@@ -56,6 +56,9 @@ export default async function AdminLayout({
           <Link href="/admin/security" className="text-[#3f679b] hover:underline">
             Security
           </Link>
+          <Link href="/admin/announcement" className="text-[#3f679b] hover:underline">
+            Announcement
+          </Link>
         </nav>
       )}
       {children}

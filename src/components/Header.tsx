@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-const navItems = [
+type NavItem = { href: string; label: string; external?: boolean };
+
+const navItems: NavItem[] = [
   { href: "/", label: "Top" },
   { href: "/new", label: "New" },
   { href: "/submit", label: "Submit" },
@@ -13,6 +15,29 @@ const navItems = [
   { href: "/jobs", label: "Jobs" },
   { href: "/advertise", label: "Advertise" },
 ];
+
+function NavAnchor({
+  item,
+  className,
+  onClick,
+}: {
+  item: NavItem;
+  className: string;
+  onClick?: () => void;
+}) {
+  if (item.external) {
+    return (
+      <a href={item.href} target="_blank" rel="noopener noreferrer" className={className} onClick={onClick}>
+        {item.label}
+      </a>
+    );
+  }
+  return (
+    <Link href={item.href} className={className} onClick={onClick}>
+      {item.label}
+    </Link>
+  );
+}
 
 function MenuIcon({ open }: { open: boolean }) {
   if (open) {
@@ -33,11 +58,14 @@ function MenuIcon({ open }: { open: boolean }) {
 export default function Header({
   logoSrc,
   showAdvertise = false,
+  merchHref = null,
 }: {
   logoSrc: string | null;
   showAdvertise?: boolean;
+  merchHref?: string | null;
 }) {
   const items = navItems.filter((item) => showAdvertise || item.href !== "/advertise");
+  if (merchHref) items.push({ href: merchHref, label: "Merch", external: true });
   const supabase = createClient();
   const router = useRouter();
   const pathname = usePathname();
@@ -177,9 +205,7 @@ export default function Header({
             {items.map((item, index) => (
               <span key={item.href} className="flex items-center">
                 {index > 0 && <span className="mx-1 text-[#3f679b]/50">|</span>}
-                <Link href={item.href} className="text-[#3f679b] hover:underline">
-                  {item.label}
-                </Link>
+                <NavAnchor item={item} className="text-[#3f679b] hover:underline" />
               </span>
             ))}
 
@@ -198,14 +224,12 @@ export default function Header({
           className={`${menuOpen ? "flex" : "hidden"} mt-3 flex-col gap-1 border-t border-[#3f679b]/25 pt-2 text-base font-medium lg:hidden`}
         >
           {items.map((item) => (
-            <Link
+            <NavAnchor
               key={item.href}
-              href={item.href}
+              item={item}
               onClick={closeMenu}
               className="py-1.5 text-[#3f679b] hover:underline"
-            >
-              {item.label}
-            </Link>
+            />
           ))}
           <div className="mt-1 flex flex-col gap-1 border-t border-[#3f679b]/25 py-2">
             {username === undefined ? (

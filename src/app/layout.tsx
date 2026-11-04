@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
 import Header from "@/components/Header";
 import AdSidebar from "@/components/AdSidebar";
 import NewsletterSignup from "@/components/NewsletterSignup";
-import { DEFAULT_DESCRIPTION, SITE_NAME, advertiseEnabled, getSiteUrl } from "@/lib/site";
+import { DEFAULT_DESCRIPTION, SITE_NAME, advertiseEnabled, getSiteUrl, publicMerchHref } from "@/lib/site";
 import { getSiteLogoSrc } from "@/lib/site-logo";
 
 export const metadata: Metadata = {
@@ -48,7 +49,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-[#f6f6ef] font-sans text-black">
-        <Header logoSrc={getSiteLogoSrc()} showAdvertise={advertiseEnabled()} />
+        <AnnouncementBanner />
+        <Header
+          logoSrc={getSiteLogoSrc()}
+          showAdvertise={advertiseEnabled()}
+          merchHref={publicMerchHref()}
+        />
 
         <div className="mx-auto flex w-full max-w-6xl flex-1 gap-6 px-4 py-4">
           {/* Main content */}

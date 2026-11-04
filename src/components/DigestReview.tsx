@@ -11,6 +11,7 @@ import {
   type DigestActionResult,
 } from "@/app/admin/review/actions";
 import TweetDraftField from "@/components/TweetDraftField";
+import { reviewStoryCollapsed } from "@/lib/review-card";
 
 type ReviewStory = {
   id: string;
@@ -66,6 +67,8 @@ export default function DigestReview({
   const [message, setMessage] = useState<string | null>(null);
   const [postId, setPostId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [publishedNow, setPublishedNow] = useState<Record<string, true>>({});
 
   if (flagSource !== groups) {
     setFlagSource(groups);
@@ -110,6 +113,10 @@ export default function DigestReview({
       }
       setMessage(result.message);
       setPostId(result.postId ?? null);
+      if (actionName === "publish") {
+        setPublishedNow((current) => ({ ...current, [id]: true }));
+        setExpanded((current) => ({ ...current, [id]: false }));
+      }
       router.refresh();
     } catch {
       setError("That could not be saved.");
@@ -247,8 +254,51 @@ export default function DigestReview({
                 const publishing = pending?.id === story.id && pending.action === "publish";
                 const deleting = pending?.id === story.id && pending.action === "delete";
                 const checked = flags[story.id] ?? story.isPolitical;
+                const status = publishedNow[story.id] ? "published" : story.status;
+                const collapsed = reviewStoryCollapsed(status, expanded[story.id] === true);
+                if (collapsed) {
+                  return (
+                    <li key={story.id} className="rounded border border-[#e0e0e0] bg-white px-3 py-2">
+                      <div className="flex min-h-11 items-center gap-3">
+                        <h3 className="min-w-0 flex-1 truncate font-semibold text-[#1a1a1a]">
+                          <a
+                            href={story.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#3f679b] hover:underline"
+                          >
+                            {story.headline}
+                          </a>
+                        </h3>
+                        <span className="shrink-0 text-sm text-[#3a3a3a]">Published</span>
+                        <button
+                          type="button"
+                          aria-expanded={false}
+                          aria-label={`Expand ${story.headline}`}
+                          onClick={() => setExpanded((current) => ({ ...current, [story.id]: true }))}
+                          className="field-button min-h-11 shrink-0 rounded border border-[#c8c8c8] bg-white px-3 text-sm font-medium text-[#1a1a1a]"
+                        >
+                          Expand
+                        </button>
+                      </div>
+                    </li>
+                  );
+                }
                 return (
                   <li key={story.id} className="rounded border border-[#e0e0e0] bg-white p-3">
+                    {status === "published" ? (
+                      <div className="mb-2 flex justify-end">
+                        <button
+                          type="button"
+                          aria-expanded={true}
+                          aria-label={`Collapse ${story.headline}`}
+                          onClick={() => setExpanded((current) => ({ ...current, [story.id]: false }))}
+                          className="field-button min-h-11 rounded border border-[#c8c8c8] bg-white px-3 text-sm font-medium text-[#1a1a1a]"
+                        >
+                          Collapse
+                        </button>
+                      </div>
+                    ) : null}
                     <h3 className="font-semibold wrap-break-word text-[#1a1a1a]">
                       <a
                         href={story.url}
@@ -278,7 +328,7 @@ export default function DigestReview({
                         />
                         Politics
                       </label>
-                      {story.status === "pending" ? (
+                      {status === "pending" ? (
                         <>
                           <button
                             type="button"
