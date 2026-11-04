@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
-import type { EmailOtpType } from "@supabase/supabase-js";
+import type { EmailOtpType, User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
+import { authLinkKind, kindAfterSession } from "@/lib/auth-callback";
 
 function publicOrigin(request: NextRequest) {
   const { origin } = new URL(request.url);
@@ -15,19 +16,15 @@ function publicOrigin(request: NextRequest) {
   return origin;
 }
 
-function resetPasswordRedirect(origin: string, error?: string) {
-  const url = new URL("/reset-password", origin);
-  if (error) url.searchParams.set("error", error);
+function loginRedirect(origin: string, params: Record<string, string>) {
+  const url = new URL("/login", origin);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   return url;
 }
 
-function confirmedRedirect(origin: string) {
-  return new URL("/", origin);
-}
-
-function confirmErrorRedirect(origin: string) {
-  const url = new URL("/login", origin);
-  url.searchParams.set("error", "confirm");
+function resetPasswordRedirect(origin: string, error?: string) {
+  const url = new URL("/reset-password", origin);
+  if (error) url.searchParams.set("error", error);
   return url;
 }
 
@@ -39,24 +36,36 @@ function failureCode(message: string) {
   return "invalid_link";
 }
 
-// Completes Supabase's password-reset email link, then sends the user to
-// /reset-password with a session cookie so they can call updateUser.
+function failureRedirect(origin: string, kind: ReturnType<typeof authLinkKind>, message: string) {
+  if (kind === "recovery") return resetPasswordRedirect(origin, failureCode(message));
+  return loginRedirect(origin, { error: "confirm" });
+}
+
+// Signup confirmation and password recovery both return here.
+// Only a recovery link continues to /reset-password. Confirming an email
+// leaves the password from signup unchanged and asks the person to log in.
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const origin = publicOrigin(request);
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const confirming = type === "signup" || type === "email";
-  const isRecoveryToken = Boolean(tokenHash && type === "recovery");
-  const isSignupToken = Boolean(tokenHash && confirming);
+  const kind = authLinkKind(type);
 
-  if (!code && !isRecoveryToken && !isSignupToken) {
-    return NextResponse.redirect(resetPasswordRedirect(origin, "invalid_link"));
+  if (!code && !tokenHash) {
+    return NextResponse.redirect(
+      kind === "recovery"
+        ? resetPasswordRedirect(origin, "invalid_link")
+        : loginRedirect(origin, { error: "confirm" })
+    );
   }
 
-  const successUrl = confirming ? confirmedRedirect(origin) : resetPasswordRedirect(origin);
-  const response = NextResponse.redirect(successUrl);
+  if (tokenHash && kind === "unknown") {
+    return NextResponse.redirect(loginRedirect(origin, { error: "confirm" }));
+  }
+
+  const storedCookies: { name: string; value: string; options?: Parameters<NextResponse["cookies"]["set"]>[2] }[] = [];
+  const storedHeaders: Record<string, string> = {};
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -67,39 +76,46 @@ export async function GET(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet, headers) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options);
+          cookiesToSet.forEach((cookie) => {
+            storedCookies.push(cookie);
           });
-          Object.entries(headers).forEach(([key, value]) => {
-            response.headers.set(key, value);
-          });
+          Object.assign(storedHeaders, headers);
         },
       },
     }
   );
 
-  if (isRecoveryToken || isSignupToken) {
-    const { error } = await supabase.auth.verifyOtp({
-      type: type as EmailOtpType,
-      token_hash: tokenHash!,
+  function redirectWithSession(url: URL) {
+    const redirect = NextResponse.redirect(url);
+    storedCookies.forEach(({ name, value, options }) => {
+      redirect.cookies.set(name, value, options);
     });
-    if (error) {
-      return NextResponse.redirect(
-        confirming
-          ? confirmErrorRedirect(origin)
-          : resetPasswordRedirect(origin, failureCode(error.message))
-      );
-    }
-    return response;
+    Object.entries(storedHeaders).forEach(([key, value]) => {
+      redirect.headers.set(key, value);
+    });
+    return redirect;
   }
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code!);
-  if (error) {
-    return NextResponse.redirect(
-      confirming
-        ? confirmErrorRedirect(origin)
-        : resetPasswordRedirect(origin, failureCode(error.message))
-    );
+  let user: User | null = null;
+
+  if (tokenHash) {
+    const { data, error } = await supabase.auth.verifyOtp({
+      type: type as EmailOtpType,
+      token_hash: tokenHash,
+    });
+    if (error) return NextResponse.redirect(failureRedirect(origin, kind, error.message));
+    user = data.user;
+  } else {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code!);
+    if (error) return NextResponse.redirect(failureRedirect(origin, kind, error.message));
+    user = data.user;
   }
-  return response;
+
+  const resolved = kindAfterSession(type, user);
+  if (resolved === "recovery") {
+    return redirectWithSession(resetPasswordRedirect(origin));
+  }
+
+  await supabase.auth.signOut();
+  return redirectWithSession(loginRedirect(origin, { confirmed: "1" }));
 }

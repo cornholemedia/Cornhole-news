@@ -119,14 +119,20 @@ environment variables are required — the app sends people back to
 `{the site they're on}/auth/callback`. Supabase will only do that if the URL
 is allowed.
 
-In the Supabase dashboard, open **Authentication → URL Configuration**:
+In the Supabase dashboard, open **Authentication → URL Configuration** and set these exactly:
 
 - **Site URL**: `https://cornholenews.news`
+  Do not set this to `/reset-password`. A Site URL of the reset page sends
+  every confirmation link there.
   (use `http://localhost:3000` only while testing on your own machine)
-- **Redirect URLs** — add the production callback, and localhost only while
-  you are testing on your own machine:
+- **Redirect URLs** — add each of these. Supabase matches the full redirect,
+  including `?type=`:
   - `https://cornholenews.news/auth/callback`
+  - `https://cornholenews.news/auth/callback?type=signup`
+  - `https://cornholenews.news/auth/callback?type=recovery`
   - `http://localhost:3000/auth/callback`
+  - `http://localhost:3000/auth/callback?type=signup`
+  - `http://localhost:3000/auth/callback?type=recovery`
 
 `https://www.cornholenews.news` redirects to `https://cornholenews.news`.
 Do not add a `vercel.app` preview address. Password reset and signup
@@ -143,24 +149,25 @@ with `supabase/templates/recovery.html`:
 
 <p>We received a request to reset your password. Follow the link below to choose a new one.</p>
 <p>
-  <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery">Reset password</a>
+  <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery">Reset password</a>
 </p>
 ```
 
-`{{ .RedirectTo }}` is `https://cornholenews.news/auth/callback`.
-The callback checks the token, then sends the user to `/reset-password` to
-choose a new password. Keep the redirect URL free of a query string — the
-template adds `?token_hash=`.
+`{{ .SiteURL }}` must be `https://cornholenews.news` with no path and no trailing
+slash. The callback checks the token, then sends the user to `/reset-password`
+to choose a new password. Only `type=recovery` does that.
 
-Signup confirmation uses the same callback. Open **Authentication → Emails →
-Confirm signup** and replace the template with `supabase/templates/confirmation.html`:
+The default Confirm signup template uses `{{ .ConfirmationURL }}`. Supabase
+then returns to the callback with `?code=` and no `type`. That is not a
+password reset. Open **Authentication → Emails → Confirm signup** and replace
+the whole template with `supabase/templates/confirmation.html`:
 
 ```html
 <h2>Confirm your email</h2>
 
-<p>Follow the link below to confirm your Cornhole News account. After that, you can log in.</p>
+<p>Follow the link below to confirm your Cornhole News account. After that, you can log in with the password you chose. This link does not change that password.</p>
 <p>
-  <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup">Confirm your email</a>
+  <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup">Confirm your email</a>
 </p>
 ```
 
@@ -388,7 +395,7 @@ src/
     login/, signup/            → auth pages
     forgot-password/           → request a reset email
     reset-password/            → choose a new password after the email link
-    auth/callback/             → exchanges the Supabase reset link for a session
+    auth/callback/             → confirms signup, or opens reset-password for a recovery link
     submit/                    → post a new story
     about/, jobs/, advertise/  → pages, content from the pages table
     privacy/, terms/, contact/ → same editor; contact also has a message form

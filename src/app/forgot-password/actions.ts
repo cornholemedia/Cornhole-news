@@ -23,7 +23,7 @@ export async function requestPasswordReset(
   try {
     const supabase = await createClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${getSiteUrl()}/auth/callback`,
+      redirectTo: `${getSiteUrl()}/auth/callback?type=recovery`,
       captchaToken: captcha.captchaToken,
     });
 

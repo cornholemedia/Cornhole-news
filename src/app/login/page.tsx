@@ -21,6 +21,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const nextPath = safeNextPath(searchParams.get("next"));
   const confirmError = searchParams.get("error") === "confirm";
+  const confirmed = searchParams.get("confirmed") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(
@@ -94,6 +95,11 @@ function LoginForm() {
 
         <TurnstileField resetKey={String(turnstileKey)} />
 
+        {confirmed && !error ? (
+          <p role="status" className="text-sm text-[#2f6b3a]">
+            Email confirmed — please log in.
+          </p>
+        ) : null}
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <button
