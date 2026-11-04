@@ -2,5 +2,5 @@
 
 <p>We received a request to reset your password. Follow the link below to choose a new one.</p>
 <p>
-  <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery">Reset password</a>
+  <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery">Reset password</a>
 </p>

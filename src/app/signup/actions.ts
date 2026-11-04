@@ -63,7 +63,7 @@ export async function signUpAccount(
       email,
       password,
       options: {
-        emailRedirectTo: `${getSiteUrl()}/auth/callback`,
+        emailRedirectTo: `${getSiteUrl()}/auth/callback?type=signup`,
         captchaToken: captcha.captchaToken,
         data: {
           username,
