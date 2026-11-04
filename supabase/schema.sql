@@ -607,6 +607,7 @@ on conflict (slug) do nothing;
 -- then 20261022_ads.sql for the sidebar and mobile ad slots,
 -- then 20261027_tweet_draft.sql for the optional tweet on each digest story,
 -- then 20261102_admin_mfa_aal.sql so an admin with a verified authenticator
--- must be aal2. Admins who have not enrolled are unchanged.
+-- must be aal2. Admins who have not enrolled are unchanged,
+-- then 20261104_site_announcement.sql for the banner at the top of the site.
 -- Publishing uses a Cornhole News profile; the steps to create that profile
 -- are at the top of the digest file.

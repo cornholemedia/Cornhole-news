@@ -38,6 +38,7 @@ voting, comments).
    - `supabase/migrations/20261022_ads.sql`
    - `supabase/migrations/20261027_tweet_draft.sql`
    - `supabase/migrations/20261102_admin_mfa_aal.sql`
+   - `supabase/migrations/20261104_site_announcement.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -90,6 +91,10 @@ voting, comments).
      by default in Supabase Authentication. If setup says it is turned off,
      open Authentication → Multi-Factor and enable TOTP. Change the variable
      in Vercel, then redeploy.
+   - `NEXT_PUBLIC_SHOW_MERCH` = `true` only when you want a Merch link in the
+     header. Leave it unset to leave the link out of the page entirely.
+     `NEXT_PUBLIC_MERCH_URL` is the http or https address that link opens.
+     Change them in Vercel, then redeploy.
    - `DIGEST_INGEST_SECRET` = a long random string, at least 16 characters.
      The daily Midwest digest job sends it as `Authorization: Bearer …`.
      The review page does not use this secret.
@@ -302,6 +307,7 @@ accounts that are not admins.
    - `supabase/migrations/20261022_ads.sql`
    - `supabase/migrations/20261027_tweet_draft.sql`
    - `supabase/migrations/20261102_admin_mfa_aal.sql`
+   - `supabase/migrations/20261104_site_announcement.sql`
    The first reserves username `Cornhole_Admin` and adds bans. The second
    limits posts and comments and freezes `created_at`. The third stops
    anonymous writes to the contact, newsletter, and job tables, and to the
@@ -321,6 +327,8 @@ accounts that are not admins.
    The tenth keeps admin database writes open until that admin has a verified
    authenticator. After that, `is_admin()` is true only for an aal2 session.
    Digest ingest is unchanged.
+   The eleventh adds the site announcement banner. Visitors can read it only
+   while it is on. Admins edit it at `/admin/announcement`.
    Re-running `20261017_content_guards.sql` puts the caps back on digest publish;
    run the sixth file again if you do that. Re-running `20260923_editable_pages.sql`
    after the ban file removes the ban guard. Run `20261017_user_bans.sql` again
@@ -419,6 +427,7 @@ Optional local values in `.env.local`:
 - `SHOW_ADS=true` shows a live sidebar or mobile ad. Leave it out to hide live ads.
 - `NEXT_PUBLIC_SHOW_ADVERTISE=true` shows the Advertise link, `/advertise`, and empty ad placeholders. Leave it out to hide them.
 - `ADMIN_REQUIRE_MFA=true` sends admins who have not enrolled an authenticator app to `/admin/security`. Leave it out until that app is set up.
+- `NEXT_PUBLIC_SHOW_MERCH=true` and `NEXT_PUBLIC_MERCH_URL` add a Merch link. Leave both out to hide it.
 - `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` let a local server
   accept a digest. Leave them out and the ingest route answers that it is
   not configured. Do not prefix either name with `NEXT_PUBLIC_`.
