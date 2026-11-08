@@ -174,7 +174,10 @@ the whole template with `supabase/templates/confirmation.html`:
 Leave **Confirm email** turned on before the public launch.
 
 After the new password is saved, the site signs every other device out and
-keeps the browser that just changed the password logged in.
+keeps the browser that just changed the password logged in. If that account
+has an authenticator app, the reset page asks for its 6-digit code before the
+new password is saved. Accounts without an authenticator skip that step. The
+code form is on `/reset-password`, not on an admin page.
 
 That's it — every time you push a change to GitHub, Vercel rebuilds and
 redeploys automatically.
