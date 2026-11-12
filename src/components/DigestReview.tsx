@@ -167,9 +167,9 @@ export default function DigestReview({
 
   return (
     <section aria-labelledby="digest-review-heading">
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end">
-        <div className="sm:min-w-80">
-          <label htmlFor="digest-date" className="field-label">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="sm:min-w-80 sm:flex-1">
+          <label htmlFor="digest-date" className="field-label text-base">
             Digest date
           </label>
           <select
@@ -180,7 +180,7 @@ export default function DigestReview({
               const next = event.target.value;
               if (next && next !== digestDate) router.push(`/admin/review?date=${next}`);
             }}
-            className="field-input"
+            className="field-input min-h-12 text-base"
           >
             {dates.map((option) => (
               <option key={option.date} value={option.date}>
@@ -201,17 +201,17 @@ export default function DigestReview({
               `Mark ${dateLabel} finished? Every story still waiting for this date will be deleted. Published stories stay on the site. A later digest will not bring these links back for this date.`
             )
           }
-          className="field-button min-h-11 rounded border border-red-700 bg-white px-3 text-sm font-medium text-red-700 disabled:opacity-60"
+          className="field-button min-h-12 w-full rounded border border-red-700 bg-white px-4 text-base font-medium text-red-700 disabled:opacity-60 sm:w-auto"
         >
           {finishing ? "Finishing..." : "Finished"}
         </button>
       </div>
 
-      <div className="rounded border border-[#e0e0e0] bg-white p-4">
-        <h2 id="digest-review-heading" className="font-semibold">
+      <div className="rounded border border-[#e0e0e0] bg-white p-4 sm:p-5">
+        <h2 id="digest-review-heading" className="text-lg font-semibold leading-snug">
           {dateLabel}
         </h2>
-        <p className="mt-1 text-sm text-[#3a3a3a]">
+        <p className="mt-2 text-base leading-relaxed text-[#1a1a1a]">
           {waiting === 0
             ? "Nothing is waiting for this date. Published stories stay listed here."
             : `${waiting} ${waiting === 1 ? "story is" : "stories are"} still hidden. Publish posts that one story as Cornhole News. Politics is off until you turn it on.`}
@@ -223,7 +223,7 @@ export default function DigestReview({
         </p>
 
         {message ? (
-          <p role="status" className="mt-4 text-sm text-[#2f6b3a]">
+          <p role="status" className="mt-4 text-base text-[#2f6b3a]">
             {message}
             {postId ? (
               <>
@@ -236,7 +236,7 @@ export default function DigestReview({
           </p>
         ) : null}
         {error ? (
-          <p role="alert" className="mt-4 text-sm text-red-700">
+          <p role="alert" className="mt-4 text-base text-red-700">
             {error}
           </p>
         ) : null}
@@ -245,11 +245,11 @@ export default function DigestReview({
       {groups.map((group) => {
         const sectionId = `section-${group.section.replace(/\s+/g, "-").toLowerCase()}`;
         return (
-          <section key={group.section} className="mt-6" aria-labelledby={sectionId}>
-            <h2 id={sectionId} className="text-sm font-semibold tracking-wide text-[#1a1a1a]">
+          <section key={group.section} className="mt-8" aria-labelledby={sectionId}>
+            <h2 id={sectionId} className="text-base font-semibold tracking-wide text-[#1a1a1a]">
               {group.section}
             </h2>
-            <ul className="mt-2 space-y-3">
+            <ul className="mt-3 space-y-3">
               {group.stories.map((story) => {
                 const publishing = pending?.id === story.id && pending.action === "publish";
                 const deleting = pending?.id === story.id && pending.action === "delete";
@@ -258,9 +258,9 @@ export default function DigestReview({
                 const collapsed = reviewStoryCollapsed(status, expanded[story.id] === true);
                 if (collapsed) {
                   return (
-                    <li key={story.id} className="rounded border border-[#e0e0e0] bg-white px-3 py-2">
-                      <div className="flex min-h-11 items-center gap-3">
-                        <h3 className="min-w-0 flex-1 truncate font-semibold text-[#1a1a1a]">
+                    <li key={story.id} className="rounded border border-[#e0e0e0] bg-white p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                        <h3 className="min-w-0 text-base font-semibold leading-snug wrap-break-word text-[#1a1a1a] sm:flex-1">
                           <a
                             href={story.url}
                             target="_blank"
@@ -270,36 +270,38 @@ export default function DigestReview({
                             {story.headline}
                           </a>
                         </h3>
-                        <span className="shrink-0 text-sm text-[#3a3a3a]">Published</span>
-                        <button
-                          type="button"
-                          aria-expanded={false}
-                          aria-label={`Expand ${story.headline}`}
-                          onClick={() => setExpanded((current) => ({ ...current, [story.id]: true }))}
-                          className="field-button min-h-11 shrink-0 rounded border border-[#c8c8c8] bg-white px-3 text-sm font-medium text-[#1a1a1a]"
-                        >
-                          Expand
-                        </button>
+                        <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+                          <span className="text-sm font-medium text-[#3a3a3a]">Published</span>
+                          <button
+                            type="button"
+                            aria-expanded={false}
+                            aria-label={`Expand ${story.headline}`}
+                            onClick={() => setExpanded((current) => ({ ...current, [story.id]: true }))}
+                            className="field-button min-h-11 shrink-0 rounded border border-[#c8c8c8] bg-white px-4 text-base font-medium text-[#1a1a1a]"
+                          >
+                            Expand
+                          </button>
+                        </div>
                       </div>
                     </li>
                   );
                 }
                 return (
-                  <li key={story.id} className="rounded border border-[#e0e0e0] bg-white p-3">
+                  <li key={story.id} className="rounded border border-[#e0e0e0] bg-white p-4">
                     {status === "published" ? (
-                      <div className="mb-2 flex justify-end">
+                      <div className="mb-3 flex sm:justify-end">
                         <button
                           type="button"
                           aria-expanded={true}
                           aria-label={`Collapse ${story.headline}`}
                           onClick={() => setExpanded((current) => ({ ...current, [story.id]: false }))}
-                          className="field-button min-h-11 rounded border border-[#c8c8c8] bg-white px-3 text-sm font-medium text-[#1a1a1a]"
+                          className="field-button min-h-11 w-full rounded border border-[#c8c8c8] bg-white px-4 text-base font-medium text-[#1a1a1a] sm:w-auto"
                         >
                           Collapse
                         </button>
                       </div>
                     ) : null}
-                    <h3 className="font-semibold wrap-break-word text-[#1a1a1a]">
+                    <h3 className="text-base font-semibold leading-snug wrap-break-word text-[#1a1a1a]">
                       <a
                         href={story.url}
                         target="_blank"
@@ -309,14 +311,14 @@ export default function DigestReview({
                         {story.headline}
                       </a>
                     </h3>
-                    <p className="mt-2 text-sm leading-relaxed wrap-break-word text-[#1a1a1a]">
+                    <p className="mt-2 text-base leading-relaxed wrap-break-word text-[#1a1a1a]">
                       {story.body}
                     </p>
                     <TweetDraftField storyId={story.id} initialText={story.tweetText} />
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                       <label
                         htmlFor={`politics-${story.id}`}
-                        className="flex min-h-11 items-center gap-2 text-sm text-[#1a1a1a]"
+                        className="flex min-h-11 items-center gap-2 text-base text-[#1a1a1a]"
                       >
                         <input
                           id={`politics-${story.id}`}
@@ -324,7 +326,7 @@ export default function DigestReview({
                           checked={checked}
                           disabled={busy || !politicsReady}
                           onChange={(event) => onPolitics(story.id, event.target.checked)}
-                          className="h-4 w-4 accent-[#3f679b]"
+                          className="h-5 w-5 accent-[#3f679b]"
                         />
                         Politics
                       </label>
@@ -336,7 +338,7 @@ export default function DigestReview({
                             onClick={() =>
                               run(story.id, "publish", () => publishDigestStory(story.id))
                             }
-                            className="field-button min-h-11 rounded bg-[#3f679b] px-3 text-sm font-medium text-white hover:bg-[#345580] disabled:opacity-60"
+                            className="field-button min-h-11 w-full rounded bg-[#3f679b] px-4 text-base font-medium text-white hover:bg-[#345580] disabled:opacity-60 sm:w-auto"
                           >
                             {publishing ? "Publishing..." : "Publish"}
                           </button>
@@ -351,13 +353,13 @@ export default function DigestReview({
                                 "Delete this story? It stays off the site, and a later digest will not bring this URL back for this date."
                               )
                             }
-                            className="field-button min-h-11 rounded border border-red-700 bg-white px-3 text-sm font-medium text-red-700 disabled:opacity-60"
+                            className="field-button min-h-11 w-full rounded border border-red-700 bg-white px-4 text-base font-medium text-red-700 disabled:opacity-60 sm:w-auto"
                           >
                             {deleting ? "Deleting..." : "Delete"}
                           </button>
                         </>
                       ) : (
-                        <p className="text-sm text-[#3a3a3a]">
+                        <p className="text-base text-[#1a1a1a]">
                           Published.
                           {story.postId ? (
                             <>

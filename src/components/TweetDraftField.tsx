@@ -76,7 +76,7 @@ export default function TweetDraftField({
 
   return (
     <div className="mt-3">
-      <label htmlFor={`tweet-${storyId}`} className="field-label">
+      <label htmlFor={`tweet-${storyId}`} className="field-label text-base">
         Tweet
       </label>
       <textarea
@@ -91,10 +91,10 @@ export default function TweetDraftField({
         onBlur={() => {
           void onBlur();
         }}
-        className="field-input"
+        className="field-input text-base leading-relaxed"
       />
-      <div className="mt-2 flex flex-wrap items-center gap-3">
-        <span id={countId} className={`text-xs ${over ? "text-red-700" : "text-[#666]"}`}>
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <span id={countId} className={`text-sm ${over ? "text-red-700" : "text-[#3a3a3a]"}`}>
           {count}/{TWEET_LIMIT}
         </span>
         <button
@@ -102,7 +102,7 @@ export default function TweetDraftField({
           onClick={() => {
             void onCopy();
           }}
-          className="field-button min-h-11 rounded border border-[#c8c8c8] bg-white px-3 text-sm font-medium text-[#1a1a1a]"
+          className="field-button min-h-11 w-full rounded border border-[#c8c8c8] bg-white px-4 text-base font-medium text-[#1a1a1a] sm:w-auto"
         >
           {copied ? "Copied" : "Copy"}
         </button>
@@ -110,15 +110,15 @@ export default function TweetDraftField({
           href={xIntentUrl(text)}
           target="_blank"
           rel="noopener"
-          className="inline-flex min-h-11 items-center rounded bg-[#3f679b] px-3 text-sm font-medium text-white hover:bg-[#345580]"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded bg-[#3f679b] px-4 text-base font-medium text-white hover:bg-[#345580] sm:w-auto"
         >
           Post on X
         </a>
-        {saving ? <span className="text-xs text-[#666]">Saving...</span> : null}
+        {saving ? <span className="text-sm text-[#3a3a3a]">Saving...</span> : null}
         {status ? (
           <span
             role={statusTone === "error" ? "alert" : "status"}
-            className={`text-xs ${statusTone === "error" ? "text-red-700" : "text-[#2f6b3a]"}`}
+            className={`text-sm ${statusTone === "error" ? "text-red-700" : "text-[#2f6b3a]"}`}
           >
             {status}
           </span>

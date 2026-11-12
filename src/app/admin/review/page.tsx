@@ -24,9 +24,9 @@ export default async function AdminDigestReviewPage({
   const review = await getDigestReview(date);
 
   return (
-    <div className="mx-auto max-w-3xl pr-36 pb-20">
-      <h1 className="mb-2 text-2xl font-bold">Review digest</h1>
-      <p className="mb-3 text-[15px] leading-relaxed text-[#666]">
+    <div className="mx-auto w-full max-w-3xl pb-24">
+      <h1 className="mb-3 text-2xl font-bold leading-tight">Review digest</h1>
+      <p className="mb-4 text-base leading-7 text-[#1a1a1a]">
         Stories from the daily Midwest digest wait here. Nothing is posted until you
         publish it. Each story has a tweet you can edit, copy, or open on X. Politics
         tags that one post, and stays off unless you turn it on.
@@ -35,26 +35,26 @@ export default async function AdminDigestReviewPage({
         last 7 days in Chicago time. A later send of a deleted link will not put it
         back.
       </p>
-      <p className="mb-6 text-sm">
+      <p className="mb-6 text-base">
         <Link href="/admin" className="text-[#3f679b] hover:underline">
           Back to admin
         </Link>
       </p>
 
       {review.loadError ? (
-        <p role="alert" className="rounded border border-[#e0e0e0] bg-white p-4 text-sm text-red-700">
+        <p role="alert" className="rounded border border-[#e0e0e0] bg-white p-4 text-base leading-relaxed text-red-700">
           {review.loadError}
         </p>
       ) : null}
 
       {!review.loadError && !review.botReady ? (
-        <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-sm text-[#1a1a1a]">
+        <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-base leading-relaxed text-[#1a1a1a]">
           {DIGEST_BOT_SETUP}
         </p>
       ) : null}
 
       {!review.loadError && review.botIsAdmin ? (
-        <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-sm text-[#1a1a1a]">
+        <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-base leading-relaxed text-[#1a1a1a]">
           Cornhole News is marked as an admin. It only needs to author digest posts. In
           the SQL editor, run: update public.profiles set is_admin = false where username
           = &apos;Cornhole News&apos;;
@@ -62,20 +62,20 @@ export default async function AdminDigestReviewPage({
       ) : null}
 
       {!review.loadError && review.dates.length === 0 ? (
-        <p className="rounded border border-[#e0e0e0] bg-white p-4 text-sm text-[#3a3a3a]">
+        <p className="rounded border border-[#e0e0e0] bg-white p-4 text-base leading-relaxed text-[#3a3a3a]">
           No digest from the last 7 days is here yet. Stories show up here after the
           daily job sends them. They stay hidden until you publish.
         </p>
       ) : null}
 
       {!review.loadError && review.selectedDate && !review.politicsReady ? (
-        <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-sm text-[#1a1a1a]">
+        <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-base leading-relaxed text-[#1a1a1a]">
           {DIGEST_POLITICS_HINT}
         </p>
       ) : null}
 
       {!review.loadError && review.selectedDate && !review.tweetsReady ? (
-        <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-sm text-[#1a1a1a]">
+        <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-base leading-relaxed text-[#1a1a1a]">
           {DIGEST_TWEET_HINT}
         </p>
       ) : null}
