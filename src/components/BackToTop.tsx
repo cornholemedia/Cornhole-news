@@ -27,7 +27,7 @@ export default function BackToTop() {
         const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
       }}
-      className="fixed bottom-4 right-4 z-30 min-h-11 rounded border border-[#c8c8c8] bg-white px-3 text-sm font-medium text-[#1a1a1a] shadow-sm hover:bg-[#f6f6ef]"
+      className="fixed bottom-4 left-1/2 z-30 min-h-11 -translate-x-1/2 rounded border border-[#c8c8c8] bg-white px-4 text-base font-medium text-[#1a1a1a] shadow-sm hover:bg-[#f6f6ef] sm:left-auto sm:right-4 sm:translate-x-0"
     >
       Back to top
     </button>
