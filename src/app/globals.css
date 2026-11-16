@@ -96,4 +96,28 @@ a:hover {
     outline: 2px solid #1a1a1a;
     outline-offset: 2px;
   }
+
+  /* Digest review Publish. Fill is the header yellow, text is the page black,
+     and the outline is the nav blue. Hover darkens that same yellow. */
+  .review-publish {
+    border: 2px solid var(--nav-text);
+    background-color: var(--header-bg);
+    color: var(--text);
+  }
+
+  .review-publish:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--header-bg) 86%, black);
+  }
+
+  .review-publish:focus-visible {
+    outline: 2px solid var(--field-text);
+    outline-offset: 2px;
+  }
+
+  .review-publish:disabled {
+    background-color: color-mix(in srgb, var(--header-bg) 68%, white);
+    color: var(--text);
+    cursor: not-allowed;
+    opacity: 1;
+  }
 }
