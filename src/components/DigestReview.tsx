@@ -338,7 +338,7 @@ export default function DigestReview({
                             onClick={() =>
                               run(story.id, "publish", () => publishDigestStory(story.id))
                             }
-                            className="field-button min-h-11 w-full rounded bg-[#3f679b] px-4 text-base font-medium text-white hover:bg-[#345580] disabled:opacity-60 sm:w-auto"
+                            className="field-button review-publish min-h-11 w-full rounded px-4 text-base font-medium sm:w-auto"
                           >
                             {publishing ? "Publishing..." : "Publish"}
                           </button>
