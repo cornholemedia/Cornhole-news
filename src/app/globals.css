@@ -121,3 +121,17 @@ a:hover {
     opacity: 1;
   }
 }
+
+/* Filled brand-blue buttons that are anchors. Kept outside @layer so it wins
+   over the unlayered `a { color: inherit }` rule, which otherwise leaves the
+   label black. Hover, focus, and active stay white on the same blue, including
+   icons that use currentColor. The yellow Publish control is .review-publish
+   and is not included. */
+a.nav-button,
+a.nav-button:hover,
+a.nav-button:focus,
+a.nav-button:focus-visible,
+a.nav-button:active {
+  color: #ffffff;
+  text-decoration: none;
+}

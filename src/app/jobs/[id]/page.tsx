@@ -109,7 +109,7 @@ export default async function JobDetailPage({
             href={job.applyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="field-button inline-flex min-h-11 items-center justify-center rounded bg-[#3f679b] px-4 text-[15px] font-medium text-white hover:bg-[#345580] hover:no-underline"
+            className="nav-button field-button inline-flex min-h-11 items-center justify-center rounded bg-[#3f679b] px-4 text-[15px] font-medium text-white hover:bg-[#345580] hover:no-underline"
           >
             Apply on the company site
           </a>

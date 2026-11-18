@@ -33,7 +33,7 @@ export default function NewsletterAdmin({ list }: { list: NewsletterAdminList })
         {!list.loadError ? (
           <Link
             href="/admin/newsletter/export"
-            className="field-button inline-flex min-h-11 items-center justify-center rounded bg-[#3f679b] px-4 text-[15px] font-medium text-white hover:bg-[#345580]"
+            className="nav-button field-button inline-flex min-h-11 items-center justify-center rounded bg-[#3f679b] px-4 text-[15px] font-medium text-white hover:bg-[#345580] hover:no-underline"
           >
             Export CSV
           </Link>
