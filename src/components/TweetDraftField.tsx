@@ -110,7 +110,7 @@ export default function TweetDraftField({
           href={xIntentUrl(text)}
           target="_blank"
           rel="noopener"
-          className="inline-flex min-h-11 w-full items-center justify-center rounded bg-[#3f679b] px-4 text-base font-medium text-white hover:bg-[#345580] sm:w-auto"
+          className="nav-button field-button inline-flex min-h-11 w-full items-center justify-center rounded bg-[#3f679b] px-4 text-base font-medium text-white hover:bg-[#345580] hover:no-underline sm:w-auto"
         >
           Post on X
         </a>

@@ -19,7 +19,7 @@ import { pageMeta, summarize } from "@/lib/seo";
 export const revalidate = 0;
 
 const postButtonClass =
-  "field-button inline-flex min-h-11 items-center justify-center rounded bg-[#3f679b] px-4 text-[15px] font-medium text-white hover:bg-[#345580] hover:no-underline";
+  "nav-button field-button inline-flex min-h-11 items-center justify-center rounded bg-[#3f679b] px-4 text-[15px] font-medium text-white hover:bg-[#345580] hover:no-underline";
 
 function selectedState(value: string | undefined): MidwestStateCode | null {
   const code = value?.trim().toUpperCase() ?? "";
