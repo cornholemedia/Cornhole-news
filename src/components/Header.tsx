@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import FollowLinks from "@/components/FollowLinks";
+import ThemeToggle from "@/components/ThemeToggle";
 import { createClient } from "@/lib/supabase/client";
 
 type NavItem = { href: string; label: string; external?: boolean };
@@ -173,10 +174,10 @@ export default function Header({
   }
 
   return (
-    <header className="w-full bg-[#ebb73f]">
+    <header className="site-header w-full">
       <div className="mx-auto max-w-6xl px-4 py-3">
         <div className="flex items-center justify-between gap-3">
-          <Link href="/" className="flex min-w-0 items-center gap-2 text-xl font-bold text-white hover:no-underline">
+          <Link href="/" className="flex min-w-0 items-center gap-2 text-xl font-bold hover:no-underline">
             {logoSrc ? (
               // eslint-disable-next-line @next/next/no-img-element -- aspect ratio is unknown until a logo file is added
               <img
@@ -213,6 +214,8 @@ export default function Header({
             ))}
 
             <span className="mx-1 text-[#3f679b]/50">|</span>
+            <ThemeToggle />
+            <span className="mx-1 text-[#3f679b]/50">|</span>
             {username === undefined ? null : username ? (
               <span className="flex items-center gap-2">{renderAuthLinks()}</span>
             ) : (
@@ -235,7 +238,8 @@ export default function Header({
               className="py-1.5 text-[#3f679b] hover:underline"
             />
           ))}
-          <div className="mt-1 flex flex-col gap-1 border-t border-[#3f679b]/25 py-2">
+          <div className="mt-1 flex flex-col items-start gap-2 border-t border-[#3f679b]/25 py-2">
+            <ThemeToggle labelled />
             {username === undefined ? (
               <span className="py-1.5 text-sm text-[#3f679b]/70">Loading…</span>
             ) : username ? (

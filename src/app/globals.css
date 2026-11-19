@@ -1,12 +1,27 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   --header-bg: #ebb73f;
+  --on-header: #1a1a1a;
   --nav-text: #3f679b;
   --page-bg: #f6f6ef;
   --text: #000000;
   --muted: #666666;
   --border: #e0e0e0;
+  --card-bg: #ffffff;
+  --link: #3f679b;
+  --link-visited: #5b3f86;
+  --vote: #5c5c5c;
+  --vote-active: #c2410c;
+  --danger: #b91c1c;
+  --ok: #2f6b3a;
+  --politics-bg: #f7f1e1;
+  --politics-text: #3d3420;
+  --politics-border: #8a7340;
+  --switch-track: #e7e4da;
+  --switch-knob: #3a3a3a;
+  --switch-border: #5c5c5c;
   /* Form controls. Text is at least 4.5:1; borders and focus rings at least 3:1. */
   --field-bg: #ffffff;
   --field-text: #1a1a1a;
@@ -15,6 +30,35 @@
   --field-placeholder: #5c5c5c;
   --field-focus: #3f679b;
   --field-disabled-bg: #f3f1ea;
+}
+
+/* Dark values are chosen for WCAG AA on the page background and on cards. */
+html.dark {
+  color-scheme: dark;
+  --page-bg: #1c1b17;
+  --text: #f3f0e6;
+  --muted: #c8c0b0;
+  --border: #8a8376;
+  --card-bg: #2a2823;
+  --link: #a9c4ee;
+  --link-visited: #d4c2f0;
+  --vote: #c4c0b6;
+  --vote-active: #ff8a3d;
+  --danger: #ffb4ae;
+  --ok: #9ddeaf;
+  --politics-bg: #3f3420;
+  --politics-text: #f6e7c1;
+  --politics-border: #d4bc84;
+  --switch-track: #3a362c;
+  --switch-knob: #f3f0e6;
+  --switch-border: #a39888;
+  --field-bg: #16150f;
+  --field-text: #f3f0e6;
+  --field-border: #a39888;
+  --field-label: #e4ddd0;
+  --field-placeholder: #b7b0a2;
+  --field-focus: #a9c4ee;
+  --field-disabled-bg: #2a2823;
 }
 
 @theme inline {
@@ -93,16 +137,16 @@ a:hover {
   }
 
   .field-button:focus-visible {
-    outline: 2px solid #1a1a1a;
+    outline: 2px solid var(--text);
     outline-offset: 2px;
   }
 
-  /* Digest review Publish. Fill is the header yellow, text is the page black,
-     and the outline is the nav blue. Hover darkens that same yellow. */
+  /* Digest review Publish. Fill stays the header yellow and the label stays
+     dark on that yellow in both themes. Hover darkens that same yellow. */
   .review-publish {
     border: 2px solid var(--nav-text);
     background-color: var(--header-bg);
-    color: var(--text);
+    color: var(--on-header);
   }
 
   .review-publish:hover:not(:disabled) {
@@ -110,13 +154,13 @@ a:hover {
   }
 
   .review-publish:focus-visible {
-    outline: 2px solid var(--field-text);
+    outline: 2px solid var(--on-header);
     outline-offset: 2px;
   }
 
   .review-publish:disabled {
     background-color: color-mix(in srgb, var(--header-bg) 68%, white);
-    color: var(--text);
+    color: var(--on-header);
     cursor: not-allowed;
     opacity: 1;
   }
@@ -131,7 +175,160 @@ a.nav-button,
 a.nav-button:hover,
 a.nav-button:focus,
 a.nav-button:focus-visible,
-a.nav-button:active {
+a.nav-button:active,
+a.nav-button:visited {
   color: #ffffff;
   text-decoration: none;
+}
+
+/* Yellow bar keeps dark type in both themes. White on this yellow is about 1.9:1. */
+.site-header {
+  background-color: var(--header-bg);
+  color: var(--on-header);
+}
+
+.site-header a,
+.site-header button {
+  color: var(--on-header);
+}
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.theme-choice {
+  min-height: 2rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--on-header);
+  background: #fffdf6;
+  color: var(--on-header);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.2rem 0.35rem;
+}
+
+.theme-choice:focus-visible {
+  outline: 2px solid var(--on-header);
+  outline-offset: 2px;
+}
+
+.politics-tag {
+  border: 1px solid var(--politics-border);
+  background: var(--politics-bg);
+  color: var(--politics-text);
+}
+
+.vote-arrow {
+  color: var(--vote);
+}
+
+.vote-arrow:hover:not(:disabled),
+.vote-arrow.is-voted {
+  color: var(--vote-active);
+}
+
+.switch-track {
+  border: 1px solid var(--switch-border);
+  background-color: var(--switch-track);
+}
+
+.peer:checked ~ .switch-track {
+  border-color: var(--nav-text);
+  background-color: var(--nav-text);
+}
+
+.peer:focus-visible ~ .switch-track {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.switch-knob {
+  background-color: var(--switch-knob);
+}
+
+.peer:checked ~ .switch-knob {
+  background-color: #ffffff;
+}
+
+/* Story and comment links. Anchors otherwise inherit, which beats a utility color. */
+html.dark main a:not(.nav-button) {
+  color: var(--link);
+}
+
+html.dark main a:not(.nav-button):visited {
+  color: var(--link-visited);
+}
+
+html.dark ::selection {
+  background: #3f679b;
+  color: #ffffff;
+}
+
+/* Hard-coded light utilities, remapped only while .dark is on the document. */
+html.dark .text-black,
+html.dark .text-\[\#1a1a1a\],
+html.dark .hover\:text-black:hover {
+  color: var(--text);
+}
+
+html.dark .text-\[\#3a3a3a\],
+html.dark .text-\[\#666\],
+html.dark .text-\[\#5c5c5c\],
+html.dark .text-gray-400 {
+  color: var(--muted);
+}
+
+html.dark .text-\[\#3f679b\] {
+  color: var(--link);
+}
+
+html.dark .site-header .text-\[\#3f679b\],
+html.dark .site-header .hover\:text-\[\#3f679b\]:hover,
+html.dark .site-header .text-black,
+html.dark .site-header .hover\:text-black:hover {
+  color: var(--on-header);
+}
+
+html.dark .text-\[\#2f6b3a\] {
+  color: var(--ok);
+}
+
+html.dark .text-red-700,
+html.dark .text-red-600,
+html.dark .hover\:text-red-700:hover {
+  color: var(--danger);
+}
+
+html.dark .border-red-700 {
+  border-color: var(--danger);
+}
+
+html.dark .bg-white,
+html.dark .bg-gray-50 {
+  background-color: var(--card-bg);
+}
+
+html.dark .bg-\[\#f6f6ef\],
+html.dark .hover\:bg-\[\#f6f6ef\]:hover {
+  background-color: var(--page-bg);
+}
+
+html.dark .border-\[\#e0e0e0\],
+html.dark .border-\[\#c8c8c8\],
+html.dark .border-gray-300,
+html.dark .border-l-\[\#e0e0e0\] {
+  border-color: var(--border);
+}
+
+html.dark .border-\[\#6b6b6b\],
+html.dark .border-\[\#5c5c5c\],
+html.dark .border-\[\#3f679b\] {
+  border-color: var(--link);
+}
+
+html.dark .accent-\[\#3f679b\] {
+  accent-color: var(--link);
 }

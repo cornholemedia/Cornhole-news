@@ -10,6 +10,7 @@ const STATIC_PATHS = [
   "/new",
   "/submit",
   "/about",
+  "/faq",
   "/jobs",
   "/jobs/post",
   "/advertise",

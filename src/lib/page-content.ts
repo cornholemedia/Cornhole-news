@@ -9,9 +9,11 @@ import {
   TERMS_SUBTITLE,
   TERMS_TITLE,
 } from "./legal-copy";
+import { FAQ_BODY, FAQ_DESCRIPTION, FAQ_TITLE } from "./faq";
 
 export const PAGE_SLUGS = [
   "about",
+  "faq",
   "jobs",
   "advertise",
   "privacy",
@@ -47,6 +49,12 @@ export const PAGE_PRESENTATION: Record<PageSlug, PagePresentation> = {
   about: {
     variant: "prose",
     subtitleClass: "mb-6 text-[15px] leading-relaxed",
+    cardClass: "",
+    headingClass: "mb-2 text-lg font-semibold",
+  },
+  faq: {
+    variant: "prose",
+    subtitleClass: "mb-6 text-[15px] leading-relaxed text-[#666]",
     cardClass: "",
     headingClass: "mb-2 text-lg font-semibold",
   },
@@ -89,6 +97,11 @@ export const DEFAULT_PAGES: Record<PageSlug, Omit<StaticPageContent, "slug">> = 
     body: `Cornhole News is a news and discussion site for the 12 Midwestern states.
 
 People share links, start conversations, and comment on what is happening in the region. The site is inspired by classic link aggregators and is built to stay simple, fast, and focused on the content.`,
+  },
+  faq: {
+    title: FAQ_TITLE,
+    subtitle: FAQ_DESCRIPTION,
+    body: FAQ_BODY,
   },
   jobs: {
     title: "Jobs",
