@@ -1,5 +1,5 @@
 import AdSlot from "@/components/AdSlot";
-import { getCurrentAd } from "@/lib/ads-server";
+import { getCurrentAd } from "@/lib/ads-public";
 import { adsEnabled, advertiseEnabled } from "@/lib/site";
 
 export default async function AdSidebar() {

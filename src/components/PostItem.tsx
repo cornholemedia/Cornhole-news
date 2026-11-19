@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { PostWithStats } from "@/lib/posts";
 import { formatTimeAgo } from "@/lib/time";
+import LivePoints from "./LivePoints";
 import PoliticsBadge from "./PoliticsBadge";
 import VoteButton from "./VoteButton";
 
@@ -38,7 +39,7 @@ export default function PostItem({ post, rank }: PostItemProps) {
         </div>
 
         <div className="mt-0.5 text-[13px] text-[#666]">
-          {post.points} {post.points === 1 ? "point" : "points"} by{" "}
+          <LivePoints postId={post.id} points={post.points} /> by{" "}
           <Link href={`/user/${post.author_username}`} className="hover:underline">
             {post.author_username}
           </Link>{" "}

@@ -4,6 +4,7 @@ import { fieldValue } from "@/lib/form-fields";
 import { friendlyWriteError, cleanPostBody, cleanPostTitle, safePostUrl } from "@/lib/post-fields";
 import { recordIpAttempt } from "@/lib/rate-limit";
 import { requestClientIp, requestIpHash } from "@/lib/request-ip";
+import { revalidatePublicStories, revalidateUserProfile } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
 import { TURNSTILE_FIELD, verifyTurnstileToken } from "@/lib/turnstile";
 
@@ -53,6 +54,14 @@ export async function submitPost(
   if (error || !data) {
     return { ok: false, error: friendlyWriteError(error?.message ?? "") };
   }
+
+  revalidatePublicStories(data.id);
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (typeof profile?.username === "string") revalidateUserProfile(profile.username);
 
   return { ok: true, id: data.id };
 }

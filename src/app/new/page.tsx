@@ -2,7 +2,7 @@ import PostList from "@/components/PostList";
 import { getNewPosts } from "@/lib/posts";
 import { pageMeta } from "@/lib/seo";
 
-export const revalidate = 0;
+export const revalidate = 180;
 
 export const metadata = pageMeta({
   title: "New",

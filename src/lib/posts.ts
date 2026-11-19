@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { cache } from "react";
+import { createPublicClient } from "@/lib/supabase/public";
 import { topStoryCutoff } from "@/lib/top-stories";
 
 export type PostWithStats = {
@@ -25,12 +26,14 @@ type TopPostOptions = {
 };
 
 export async function getTopPosts(limit = PAGE_SIZE, options?: TopPostOptions): Promise<PostWithStats[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
+  if (!supabase) return [];
+  const db = supabase;
   const offset = Math.max(0, Math.floor(options?.offset ?? 0));
   const cutoff = topStoryCutoff();
   const hidePolitics = options?.showPolitics === false;
 
-  let countQuery = supabase.from("posts_with_stats").select("id", { count: "exact", head: true });
+  let countQuery = db.from("posts_with_stats").select("id", { count: "exact", head: true });
   if (hidePolitics) countQuery = countQuery.eq("is_political", false);
   const { count, error: countError } = await countQuery.gt("created_at", cutoff);
   if (countError) {
@@ -42,7 +45,7 @@ export async function getTopPosts(limit = PAGE_SIZE, options?: TopPostOptions): 
 
   async function page(fresh: boolean, start: number, size: number): Promise<PostWithStats[] | null> {
     if (size <= 0) return [];
-    let query = supabase.from("posts_with_stats").select("*");
+    let query = db.from("posts_with_stats").select("*");
     if (hidePolitics) query = query.eq("is_political", false);
     query = fresh ? query.gt("created_at", cutoff) : query.lte("created_at", cutoff);
     const { data, error } = await query
@@ -74,7 +77,8 @@ export async function getTopPosts(limit = PAGE_SIZE, options?: TopPostOptions): 
 }
 
 export async function getNewPosts(limit = 30): Promise<PostWithStats[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
+  if (!supabase) return [];
   const { data, error } = await supabase
     .from("posts_with_stats")
     .select("*")
@@ -94,7 +98,8 @@ export async function getSitemapPosts(): Promise<Pick<PostWithStats, "id" | "cre
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
+    if (!supabase) return [];
     const { data, error } = await supabase
       .from("posts_with_stats")
       .select("id, created_at")
@@ -114,8 +119,9 @@ export async function getSitemapPosts(): Promise<Pick<PostWithStats, "id" | "cre
   }
 }
 
-export async function getPostById(id: number): Promise<PostWithStats | null> {
-  const supabase = await createClient();
+export const getPostById = cache(async function getPostById(id: number): Promise<PostWithStats | null> {
+  const supabase = createPublicClient();
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from("posts_with_stats")
     .select("*")
@@ -127,4 +133,4 @@ export async function getPostById(id: number): Promise<PostWithStats | null> {
     return null;
   }
   return data;
-}
+});

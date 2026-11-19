@@ -11,6 +11,7 @@ import {
 } from "@/lib/digest";
 import { cleanTweetDraft } from "@/lib/tweet";
 import { adminClient } from "@/lib/admin-session";
+import { revalidatePublicStories } from "@/lib/revalidate-public";
 
 export type DigestActionResult =
   | { ok: true; message: string; postId?: number }
@@ -46,13 +47,11 @@ function actionError(error: { message: string; code?: string }): string {
   return "That could not be saved.";
 }
 
-function revalidateDigest(published: boolean) {
+function revalidateDigest(published: boolean, postId?: number) {
   revalidatePath("/admin");
   revalidatePath("/admin/review");
   if (!published) return;
-  revalidatePath("/");
-  revalidatePath("/new");
-  revalidatePath("/sitemap.xml");
+  revalidatePublicStories(postId);
 }
 
 export async function deleteDigestStory(id: string): Promise<DigestActionResult> {
@@ -103,8 +102,7 @@ export async function publishDigestStory(id: string): Promise<DigestActionResult
     return { ok: false, error: "That story could not be published." };
   }
 
-  revalidateDigest(true);
-  revalidatePath(`/item/${postId}`);
+  revalidateDigest(true, postId);
   return { ok: true, message: "Published.", postId };
 }
 
@@ -136,8 +134,7 @@ export async function setDigestStoryPolitics(
     return { ok: false, error: "That story could not be saved." };
   }
 
-  revalidateDigest(postId != null);
-  if (postId != null) revalidatePath(`/item/${postId}`);
+  revalidateDigest(postId != null, postId ?? undefined);
   return {
     ok: true,
     message: postId != null ? "Updated the post." : "Saved.",

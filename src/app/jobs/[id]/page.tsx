@@ -14,7 +14,11 @@ import { getPublicJobPosting, isJobId } from "@/lib/job-postings";
 import { pageMeta, summarize } from "@/lib/seo";
 import { getSiteUrl } from "@/lib/site";
 
-export const revalidate = 0;
+export const revalidate = 3600;
+
+export function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({
   params,

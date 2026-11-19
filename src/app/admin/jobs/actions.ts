@@ -9,6 +9,7 @@ export type AdminActionResult = { ok: true } | { ok: false; error: string };
 
 function revalidateJob(id?: string) {
   revalidatePath("/jobs");
+  revalidatePath("/jobs/state/[code]", "page");
   revalidatePath("/admin");
   revalidatePath("/sitemap.xml");
   if (id) {

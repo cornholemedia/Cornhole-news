@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PoliticsField from "@/components/PoliticsField";
+import { revalidatePublishedPost } from "@/app/item/actions";
 import { cleanPostBody, cleanPostTitle, safePostUrl } from "@/lib/post-fields";
 
 type PostRow = {
@@ -134,6 +135,7 @@ export default function EditPostPage() {
       return;
     }
 
+    await revalidatePublishedPost(postId);
     router.push(`/item/${postId}`);
     router.refresh();
   }
