@@ -6,6 +6,8 @@ import AnnouncementBanner from "@/components/AnnouncementBanner";
 import Header from "@/components/Header";
 import AdSidebar from "@/components/AdSidebar";
 import NewsletterSignup from "@/components/NewsletterSignup";
+import FollowLinks from "@/components/FollowLinks";
+import { rssAlternateTypes } from "@/lib/seo";
 import { DEFAULT_DESCRIPTION, SITE_NAME, advertiseEnabled, getSiteUrl, publicMerchHref } from "@/lib/site";
 import { getSiteLogoSrc } from "@/lib/site-logo";
 
@@ -39,6 +41,9 @@ export const metadata: Metadata = {
     description: DEFAULT_DESCRIPTION,
     images: ["/opengraph-image"],
   },
+  alternates: {
+    types: rssAlternateTypes(),
+  },
 };
 
 export default function RootLayout({
@@ -68,6 +73,7 @@ export default function RootLayout({
           <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-4 px-4">
             <NewsletterSignup />
             <p>Cornhole News · Built for the community</p>
+            <FollowLinks tone="footer" />
             <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
               <Link href="/contact" className="hover:underline">
                 Contact
