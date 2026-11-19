@@ -3,6 +3,9 @@ export const CANONICAL_SITE_URL = "https://cornholenews.news";
 
 export const SITE_NAME = "Cornhole News";
 
+/** Public X profile. The handle is @_cornhole_, with both underscores. */
+export const X_PROFILE_URL = "https://x.com/_cornhole_";
+
 /**
  * Optional logo shown beside the site title.
  * Leave this empty to hide the logo. A file named logo.svg, logo.png,

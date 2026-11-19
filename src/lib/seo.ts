@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { RSS_LINK_TITLE, RSS_PATH } from "@/lib/rss";
 import { SITE_NAME, getSiteUrl } from "@/lib/site";
 
 const SHARE_IMAGE = {
@@ -40,7 +41,12 @@ export function pageMeta(options: {
   return {
     title: branded ? { absolute: title } : title,
     description,
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      types: {
+        "application/rss+xml": [{ url: RSS_PATH, title: RSS_LINK_TITLE }],
+      },
+    },
     openGraph: {
       title,
       description,
