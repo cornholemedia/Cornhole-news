@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { RSS_FEED_PATH } from "@/lib/public-links";
 import { SITE_NAME, getSiteUrl } from "@/lib/site";
 
 const SHARE_IMAGE = {
@@ -24,6 +25,18 @@ export function summarize(text: string, max = 160): string {
   return `${plain.slice(0, max - 1).trimEnd()}…`;
 }
 
+/** `<link rel="alternate" type="application/rss+xml">` for the public feed. */
+export function rssAlternateTypes(): NonNullable<Metadata["alternates"]>["types"] {
+  return {
+    "application/rss+xml": [
+      {
+        url: RSS_FEED_PATH,
+        title: `${SITE_NAME} RSS feed`,
+      },
+    ],
+  };
+}
+
 export function pageMeta(options: {
   title: string;
   description: string;
@@ -40,7 +53,7 @@ export function pageMeta(options: {
   return {
     title: branded ? { absolute: title } : title,
     description,
-    alternates: { canonical: url },
+    alternates: { canonical: url, types: rssAlternateTypes() },
     openGraph: {
       title,
       description,

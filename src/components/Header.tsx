@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import FollowLinks from "@/components/FollowLinks";
 import { createClient } from "@/lib/supabase/client";
 
 type NavItem = { href: string; label: string; external?: boolean };
@@ -187,21 +188,23 @@ export default function Header({
             <span className="truncate">Cornhole News</span>
           </Link>
 
-          <button
-            type="button"
-            className="inline-flex shrink-0 items-center gap-2 rounded border border-[#3f679b]/40 bg-white/50 px-3 py-1.5 text-sm font-medium text-[#3f679b] lg:hidden"
-            aria-expanded={menuOpen}
-            aria-controls="site-menu"
-            onClick={toggleMenu}
-          >
-            <MenuIcon open={menuOpen} />
-            {menuOpen ? "Close" : "Menu"}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <FollowLinks tone="header" />
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center gap-2 rounded border border-[#3f679b]/40 bg-white/50 px-3 py-1.5 text-sm font-medium text-[#3f679b] lg:hidden"
+              aria-expanded={menuOpen}
+              aria-controls="site-menu"
+              onClick={toggleMenu}
+            >
+              <MenuIcon open={menuOpen} />
+              {menuOpen ? "Close" : "Menu"}
+            </button>
 
-          <nav
-            aria-label="Main"
-            className="hidden items-center gap-1 text-sm font-medium lg:flex lg:gap-2 lg:text-base"
-          >
+            <nav
+              aria-label="Main"
+              className="hidden items-center gap-1 text-sm font-medium lg:flex lg:gap-2 lg:text-base"
+            >
             {items.map((item, index) => (
               <span key={item.href} className="flex items-center">
                 {index > 0 && <span className="mx-1 text-[#3f679b]/50">|</span>}
@@ -215,7 +218,8 @@ export default function Header({
             ) : (
               renderAuthLinks()
             )}
-          </nav>
+            </nav>
+          </div>
         </div>
 
         <nav
