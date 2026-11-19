@@ -1,11 +1,6 @@
 import "server-only";
-import { createClient } from "@supabase/supabase-js";
 import { RSS_FEED_LIMIT, toFeedItem, type RssItem } from "@/lib/rss";
-import {
-  PLACEHOLDER_SUPABASE_KEY,
-  PLACEHOLDER_SUPABASE_URL,
-  isSupabaseConfigured,
-} from "@/lib/supabase/config";
+import { createPublicClient } from "@/lib/supabase/public";
 
 /**
  * Latest public stories for the RSS feed.
@@ -17,7 +12,7 @@ import {
  * does not use the service role key.
  */
 export async function getPublishedFeedPosts(limit = RSS_FEED_LIMIT): Promise<RssItem[]> {
-  const supabase = publicReader();
+  const supabase = createPublicClient();
   if (!supabase) return [];
 
   const size = Math.min(RSS_FEED_LIMIT, Math.max(1, Math.floor(limit) || RSS_FEED_LIMIT));
@@ -41,19 +36,3 @@ export async function getPublishedFeedPosts(limit = RSS_FEED_LIMIT): Promise<Rss
   return items;
 }
 
-function publicReader() {
-  if (!isSupabaseConfigured()) return null;
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-  if (!url || !key) return null;
-  if (url === PLACEHOLDER_SUPABASE_URL || key === PLACEHOLDER_SUPABASE_KEY) return null;
-
-  return createClient(url, key, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
-}

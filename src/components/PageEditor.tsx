@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import StaticPageView from "@/components/StaticPageView";
+import { revalidateEditedPage } from "@/app/admin/pages/actions";
 import { createClient } from "@/lib/supabase/client";
 import {
   BODY_MAX,
@@ -84,6 +85,11 @@ export default function PageEditor({ page }: { page: EditablePage }) {
       return;
     }
 
+    try {
+      await revalidateEditedPage(page.slug);
+    } catch {
+      // The copy is already saved. The public page still refreshes on its timer.
+    }
     setSaved(true);
     router.refresh();
   }

@@ -13,6 +13,7 @@ import {
 } from "./rss.ts";
 
 const feedPostsSource = readFileSync(new URL("./feed-posts.ts", import.meta.url), "utf8");
+const publicClientSource = readFileSync(new URL("./supabase/public.ts", import.meta.url), "utf8");
 const rssRoute = readFileSync(new URL("../app/rss.xml/route.ts", import.meta.url), "utf8");
 const feedRoute = readFileSync(new URL("../app/feed/route.ts", import.meta.url), "utf8");
 const responseSource = readFileSync(new URL("./rss-response.ts", import.meta.url), "utf8");
@@ -56,7 +57,7 @@ test("pages advertise the RSS feed in the document head", () => {
 });
 
 test("the feed routes are public, cached, and do not use server secrets", () => {
-  for (const source of [rssRoute, feedRoute, responseSource, feedPostsSource]) {
+  for (const source of [rssRoute, feedRoute, responseSource, feedPostsSource, publicClientSource]) {
     assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY/);
     assert.doesNotMatch(source, /RESEND_API_KEY/);
     assert.doesNotMatch(source, /createServiceClient/);
@@ -65,7 +66,8 @@ test("the feed routes are public, cached, and do not use server secrets", () => 
   }
 
   assert.match(feedPostsSource, /posts_with_stats/);
-  assert.match(feedPostsSource, /NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+  assert.match(feedPostsSource, /createPublicClient/);
+  assert.match(publicClientSource, /NEXT_PUBLIC_SUPABASE_ANON_KEY/);
   assert.match(feedPostsSource, /\.order\("created_at", \{ ascending: false \}\)/);
   assert.equal(RSS_REVALIDATE_SECONDS, 300);
   assert.match(rssRoute, /export const revalidate = 300/);

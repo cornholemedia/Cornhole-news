@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
@@ -7,6 +8,7 @@ import Header from "@/components/Header";
 import AdSidebar from "@/components/AdSidebar";
 import NewsletterSignup from "@/components/NewsletterSignup";
 import FollowLinks from "@/components/FollowLinks";
+import { POLITICS_PREFERENCE_SCRIPT } from "@/lib/politics-preference";
 import { rssAlternateTypes } from "@/lib/seo";
 import { DEFAULT_DESCRIPTION, SITE_NAME, advertiseEnabled, getSiteUrl, publicMerchHref } from "@/lib/site";
 import { getSiteLogoSrc } from "@/lib/site-logo";
@@ -54,6 +56,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-[#f6f6ef] font-sans text-black">
+        <Script id="show-politics-preference" strategy="beforeInteractive">
+          {POLITICS_PREFERENCE_SCRIPT}
+        </Script>
         <AnnouncementBanner />
         <Header
           logoSrc={getSiteLogoSrc()}

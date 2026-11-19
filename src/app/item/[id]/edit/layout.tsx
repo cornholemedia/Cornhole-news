@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/seo";
 
+export const revalidate = 3600;
+
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({
   params,
 }: {

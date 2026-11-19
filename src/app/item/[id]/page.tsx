@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPostById } from "@/lib/posts";
 import { formatTimeAgo } from "@/lib/time";
 import Comments from "@/components/Comments";
 import MobileAd from "@/components/MobileAd";
 import AdminPostControls from "@/components/AdminPostControls";
 import PoliticsBadge from "@/components/PoliticsBadge";
+import LivePoints from "@/components/LivePoints";
 import { postLinkHost, safePostUrl } from "@/lib/post-fields";
+import { getPostById, getSitemapPosts } from "@/lib/posts";
 import { pageMeta, summarize } from "@/lib/seo";
 
-export const revalidate = 0;
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const posts = await getSitemapPosts();
+  return posts.map((post) => ({ id: String(post.id) }));
+}
 
 export async function generateMetadata({
   params,
@@ -75,7 +81,7 @@ export default async function ItemPage({
         </div>
 
         <div className="mt-1 text-[13px] text-[#666]">
-          {post.points} {post.points === 1 ? "point" : "points"} by{" "}
+          <LivePoints postId={post.id} points={post.points} /> by{" "}
           <Link href={`/user/${post.author_username}`} className="hover:underline">
             {post.author_username}
           </Link>{" "}

@@ -27,6 +27,7 @@ import { recordIpAttempt } from "@/lib/rate-limit";
 import { requestClientIp, requestIpHash } from "@/lib/request-ip";
 import { JOBS_RECIPIENT_KEY, recipientEmail } from "@/lib/site-settings";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { TURNSTILE_FIELD, verifyTurnstileToken } from "@/lib/turnstile";
@@ -219,7 +220,8 @@ export async function getPublicJobPostings(state?: MidwestStateCode | null): Pro
   if (!isSupabaseConfigured()) return { jobs: [], loadError: null };
 
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
+    if (!supabase) return { jobs: [], loadError: null };
     let query = supabase
       .from("job_postings_public")
       .select(PUBLIC_COLUMNS)
@@ -251,7 +253,8 @@ export async function getPublicJobPosting(id: string): Promise<{
   if (!isJobId(id) || !isSupabaseConfigured()) return { job: null, loadError: null };
 
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
+    if (!supabase) return { job: null, loadError: null };
     const { data, error } = await supabase
       .from("job_postings_public")
       .select(PUBLIC_COLUMNS)
@@ -277,7 +280,8 @@ export async function getSitemapJobPostings(): Promise<
   if (!isSupabaseConfigured()) return [];
 
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
+    if (!supabase) return [];
     const { data, error } = await supabase
       .from("job_postings_public")
       .select("id, approved_at, updated_at")

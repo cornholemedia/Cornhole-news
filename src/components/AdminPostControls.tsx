@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { deletePublishedPost } from "@/app/item/actions";
 import { createClient } from "@/lib/supabase/client";
 
 type AdminPostControlsProps = {
@@ -52,10 +53,10 @@ export default function AdminPostControls({
   async function handleDelete() {
     if (!window.confirm("Delete this post permanently?")) return;
     setBusy(true);
-    const { error } = await supabase.from("posts").delete().eq("id", postId);
+    const result = await deletePublishedPost(postId);
     setBusy(false);
-    if (error) {
-      window.alert(error.message);
+    if (!result.ok) {
+      window.alert(result.error);
       return;
     }
     router.push("/");

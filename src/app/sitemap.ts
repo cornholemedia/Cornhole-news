@@ -3,7 +3,7 @@ import { getSitemapJobPostings } from "@/lib/job-postings";
 import { getSitemapPosts } from "@/lib/posts";
 import { advertiseEnabled, getSiteUrl } from "@/lib/site";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 const STATIC_PATHS = [
   "/",

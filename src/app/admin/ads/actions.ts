@@ -26,7 +26,7 @@ function saveError(message: string): string {
 }
 
 function revalidateAds() {
-  revalidatePath("/");
+  revalidatePath("/", "layout");
   revalidatePath("/admin");
   revalidatePath("/admin/ads");
 }

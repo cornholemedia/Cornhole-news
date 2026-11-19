@@ -4,7 +4,7 @@ import { advertiseEnabled } from "@/lib/site";
 
 const page = createEditablePage("advertise");
 
-export const revalidate = 0;
+export const revalidate = 3600;
 
 export async function generateMetadata() {
   if (!advertiseEnabled()) notFound();

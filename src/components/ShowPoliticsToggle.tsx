@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { homeHref } from "@/lib/home-path";
 import {
   SHOW_POLITICS_STORAGE_KEY,
   parseShowPolitics,
@@ -14,10 +15,12 @@ const SYNC_ATTEMPT_KEY = "cornhole.showPolitics.syncAttempt";
 
 type ShowPoliticsToggleProps = {
   showPolitics: boolean;
+  page: number;
 };
 
-export default function ShowPoliticsToggle({ showPolitics }: ShowPoliticsToggleProps) {
+export default function ShowPoliticsToggle({ showPolitics, page }: ShowPoliticsToggleProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [pending, setPending] = useState<boolean | null>(null);
   const synced = useRef(false);
 
@@ -30,34 +33,64 @@ export default function ShowPoliticsToggle({ showPolitics }: ShowPoliticsToggleP
   useEffect(() => {
     if (synced.current) return;
     synced.current = true;
+    let active = true;
 
-    const stored = parseShowPolitics(window.localStorage.getItem(SHOW_POLITICS_STORAGE_KEY));
-    if (stored === null) {
-      window.localStorage.setItem(SHOW_POLITICS_STORAGE_KEY, showPolitics ? "1" : "0");
-      if (readShowPoliticsCookie() !== showPolitics) {
-        writeShowPoliticsCookie(showPolitics);
+    function go(desired: boolean) {
+      const destination = homeHref(page, desired);
+      if (destination === pathname) {
+        window.sessionStorage.removeItem(SYNC_ATTEMPT_KEY);
+        return;
       }
-      return;
+      if (window.sessionStorage.getItem(SYNC_ATTEMPT_KEY) === destination) return;
+      window.sessionStorage.setItem(SYNC_ATTEMPT_KEY, destination);
+      router.replace(destination);
     }
 
-    if (stored === showPolitics) {
-      window.sessionStorage.removeItem(SYNC_ATTEMPT_KEY);
-      return;
+    async function sync() {
+      const fromCookie = readShowPoliticsCookie();
+      if (fromCookie !== null) {
+        if (fromCookie !== showPolitics) go(fromCookie);
+        return;
+      }
+
+      const stored = parseShowPolitics(window.localStorage.getItem(SHOW_POLITICS_STORAGE_KEY));
+      if (stored !== null) {
+        writeShowPoliticsCookie(stored);
+        if (stored !== showPolitics) go(stored);
+        return;
+      }
+
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!active || !user) return;
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("show_politics")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!active) return;
+
+      const preferred = typeof data?.show_politics === "boolean" ? data.show_politics : showPolitics;
+      window.localStorage.setItem(SHOW_POLITICS_STORAGE_KEY, preferred ? "1" : "0");
+      writeShowPoliticsCookie(preferred);
+      if (preferred !== showPolitics) go(preferred);
     }
 
-    writeShowPoliticsCookie(stored);
-    const attempt = stored ? "1" : "0";
-    if (readShowPoliticsCookie() !== stored) return;
-    if (window.sessionStorage.getItem(SYNC_ATTEMPT_KEY) === attempt) return;
-    window.sessionStorage.setItem(SYNC_ATTEMPT_KEY, attempt);
-    router.refresh();
-  }, [router, showPolitics]);
+    void sync();
+    return () => {
+      active = false;
+    };
+  }, [page, pathname, router, showPolitics]);
 
   async function handleChange(next: boolean) {
     setPending(next);
     window.localStorage.setItem(SHOW_POLITICS_STORAGE_KEY, next ? "1" : "0");
     writeShowPoliticsCookie(next);
-    router.refresh();
+    window.sessionStorage.removeItem(SYNC_ATTEMPT_KEY);
+    router.push(homeHref(page, next));
 
     const supabase = createClient();
     const {

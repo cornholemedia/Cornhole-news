@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getActiveAnnouncement } from "@/lib/announcement-server";
+import { getActiveAnnouncement } from "@/lib/announcement-public";
 
 export default async function AnnouncementBanner() {
   const banner = await getActiveAnnouncement();

@@ -9,6 +9,22 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "5mb",
     },
   },
+  async redirects() {
+    return [
+      {
+        source: "/",
+        has: [{ type: "query", key: "p", value: "(?<page>[2-9]|[1-9]\\d{1,2})" }],
+        destination: "/p/:page",
+        permanent: false,
+      },
+      {
+        source: "/jobs",
+        has: [{ type: "query", key: "state", value: "(?<state>[A-Za-z]{2})" }],
+        destination: "/jobs/state/:state",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

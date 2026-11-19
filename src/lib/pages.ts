@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import { applyLegalPlaceholders } from "@/lib/legal-placeholders";
 import {
@@ -40,24 +41,42 @@ function publishedFromRow(slug: PageSlug, row: PageRow | null): StaticPageConten
   };
 }
 
-const fetchPageRows = cache(async (): Promise<{ rows: PageRow[]; loadError: string | null }> => {
+async function loadPageRows(
+  supabase: NonNullable<ReturnType<typeof createPublicClient>> | Awaited<ReturnType<typeof createClient>>
+): Promise<{ rows: PageRow[]; loadError: string | null }> {
+  const { data, error } = await supabase
+    .from("pages")
+    .select("slug, title, subtitle, body, updated_at")
+    .in("slug", [...PAGE_SLUGS]);
+
+  if (error) {
+    console.error("Error fetching pages:", error.message);
+    return { rows: [], loadError: error.message };
+  }
+
+  return { rows: (data ?? []) as PageRow[], loadError: null };
+}
+
+const fetchPublishedRows = cache(async (): Promise<{ rows: PageRow[]; loadError: string | null }> => {
+  const supabase = createPublicClient();
+  if (!supabase) return { rows: [], loadError: null };
+
+  try {
+    return await loadPageRows(supabase);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not load pages.";
+    console.error("Error fetching pages:", message);
+    return { rows: [], loadError: message };
+  }
+});
+
+const fetchAdminRows = cache(async (): Promise<{ rows: PageRow[]; loadError: string | null }> => {
   if (!isSupabaseConfigured()) {
     return { rows: [], loadError: null };
   }
 
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("pages")
-      .select("slug, title, subtitle, body, updated_at")
-      .in("slug", [...PAGE_SLUGS]);
-
-    if (error) {
-      console.error("Error fetching pages:", error.message);
-      return { rows: [], loadError: error.message };
-    }
-
-    return { rows: (data ?? []) as PageRow[], loadError: null };
+    return await loadPageRows(await createClient());
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not load pages.";
     console.error("Error fetching pages:", message);
@@ -66,14 +85,14 @@ const fetchPageRows = cache(async (): Promise<{ rows: PageRow[]; loadError: stri
 });
 
 export async function getPublishedPage(slug: PageSlug): Promise<StaticPageContent> {
-  const { rows, loadError } = await fetchPageRows();
+  const { rows, loadError } = await fetchPublishedRows();
   if (loadError) return withLegalPlaceholders(defaultPage(slug));
   const row = rows.find((entry) => entry.slug === slug) ?? null;
   return withLegalPlaceholders(publishedFromRow(slug, row));
 }
 
 export async function getPagesForAdmin(): Promise<EditablePage[]> {
-  const { rows, loadError } = await fetchPageRows();
+  const { rows, loadError } = await fetchAdminRows();
 
   return PAGE_SLUGS.map((slug) => {
     const row = rows.find((entry) => entry.slug === slug) ?? null;

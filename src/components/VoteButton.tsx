@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { POINTS_EVENT } from "@/lib/points-event";
 import { useRouter } from "next/navigation";
 
 type VoteButtonProps = {
@@ -14,6 +15,7 @@ export default function VoteButton({ postId }: VoteButtonProps) {
   const [userId, setUserId] = useState<string | null>(null);
   const [voted, setVoted] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const initialVoted = useRef<boolean | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -32,7 +34,11 @@ export default function VoteButton({ postId }: VoteButtonProps) {
           .eq("post_id", postId)
           .eq("user_id", user.id)
           .maybeSingle();
-        if (active) setVoted(!!data);
+        if (active) {
+          const already = !!data;
+          setVoted(already);
+          if (initialVoted.current === null) initialVoted.current = already;
+        }
       }
     }
 
@@ -49,6 +55,7 @@ export default function VoteButton({ postId }: VoteButtonProps) {
     }
 
     startTransition(async () => {
+      const nextVoted = !voted;
       if (voted) {
         const { error } = await supabase.from("votes").delete().eq("post_id", postId).eq("user_id", userId);
         if (error) {
@@ -66,7 +73,11 @@ export default function VoteButton({ postId }: VoteButtonProps) {
         }
         setVoted(true);
       }
-      router.refresh();
+      const initial = initialVoted.current;
+      if (initial !== null) {
+        const delta = (nextVoted ? 1 : 0) - (initial ? 1 : 0);
+        window.dispatchEvent(new CustomEvent(POINTS_EVENT, { detail: { postId, delta } }));
+      }
     });
   }
 
