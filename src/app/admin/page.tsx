@@ -1,10 +1,9 @@
 import Link from "next/link";
 import JobPostingsAdmin from "@/components/JobPostingsAdmin";
-import NewsletterAdmin from "@/components/NewsletterAdmin";
 import SiteSettingsForm from "@/components/SiteSettingsForm";
 import { getDigestAdminSummary } from "@/lib/digest-review";
 import { getJobPostingsForAdmin } from "@/lib/job-postings";
-import { getNewsletterSubscribersForAdmin } from "@/lib/newsletter";
+import { getNewsletterSubscriberTotal } from "@/lib/newsletter";
 import { getPagesForAdmin } from "@/lib/pages";
 import { getSiteSettingsForAdmin } from "@/lib/site-settings";
 import { advertiseEnabled } from "@/lib/site";
@@ -15,7 +14,7 @@ export default async function AdminPagesIndex() {
   const [pages, settings, newsletter, jobs, digest] = await Promise.all([
     getPagesForAdmin(),
     getSiteSettingsForAdmin(),
-    getNewsletterSubscribersForAdmin(),
+    getNewsletterSubscriberTotal(),
     getJobPostingsForAdmin(),
     getDigestAdminSummary(),
   ]);
@@ -28,7 +27,7 @@ export default async function AdminPagesIndex() {
         Change About, Jobs, Advertise, Privacy, Terms, and Contact. The email addresses
         below are where the contact form and new job postings are sent. Review employer
         job posts here before they appear on the jobs page. Newsletter signups from the
-        footer are listed here too. Posts still go through{" "}
+        footer are on the subscribers page. Posts still go through{" "}
         <Link href="/submit" className="text-[#3f679b] hover:underline">
           Submit
         </Link>
@@ -88,9 +87,30 @@ export default async function AdminPagesIndex() {
         />
       </div>
 
-      <div className="mb-8">
-        <NewsletterAdmin list={newsletter} />
-      </div>
+      <section
+        className="mb-8 rounded border border-[#e0e0e0] bg-white p-4"
+        aria-labelledby="subscribers-admin-heading"
+      >
+        <h2 id="subscribers-admin-heading" className="font-semibold">
+          Subscribers
+        </h2>
+        <p className="mt-1 text-sm text-[#3a3a3a]">
+          Footer newsletter signups.
+          {newsletter.total !== null
+            ? ` ${newsletter.total} ${newsletter.total === 1 ? "address" : "addresses"}.`
+            : ""}
+        </p>
+        {newsletter.loadError ? (
+          <p role="alert" className="mt-3 text-sm text-red-700">
+            {newsletter.loadError}
+          </p>
+        ) : null}
+        <p className="mt-3 text-sm">
+          <Link href="/admin/subscribers" className="text-[#3f679b] hover:underline">
+            View subscribers
+          </Link>
+        </p>
+      </section>
 
       {loadError && (
         <p className="mb-4 rounded border border-[#e0e0e0] bg-white p-4 text-sm text-red-600">

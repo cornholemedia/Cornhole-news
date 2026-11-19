@@ -47,6 +47,9 @@ export default async function AdminLayout({
           <Link href="/admin" className="text-[#3f679b] hover:underline">
             Pages
           </Link>
+          <Link href="/admin/subscribers" className="text-[#3f679b] hover:underline">
+            Subscribers
+          </Link>
           <Link href="/admin/review" className="text-[#3f679b] hover:underline">
             Digest
           </Link>

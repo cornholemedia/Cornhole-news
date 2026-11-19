@@ -124,11 +124,10 @@ function isDuplicateSignup(error: { code?: string; message?: string }): boolean 
   return error.code === "23505" || /newsletter_subscribers_email_lower_idx/i.test(error.message ?? "");
 }
 
-async function sendNewsletterEmails(email: string, source: string): Promise<void> {
+async function sendNewsletterConfirmation(email: string): Promise<void> {
   if (!process.env.RESEND_API_KEY?.trim()) return;
 
   const inbox = await recipientEmail(CONTACT_RECIPIENT_KEY);
-  const page = source || "/";
   const unsubscribe = newsletterUnsubscribeUrl(email);
   const lines = [
     "Thanks for subscribing to Cornhole News.",
@@ -147,18 +146,6 @@ async function sendNewsletterEmails(email: string, source: string): Promise<void
     replyTo: inbox,
     subject: "You're subscribed to Cornhole News",
     text: lines.join("\n"),
-  });
-
-  await sendSiteEmail({
-    to: inbox,
-    replyTo: email,
-    subject: emailSubject("Newsletter signup: ", email),
-    text: [
-      "New newsletter signup from the Cornhole News footer.",
-      "",
-      `Email: ${email}`,
-      `Page: ${page}`,
-    ].join("\n"),
   });
 }
 
@@ -199,7 +186,7 @@ export async function submitNewsletterForm(formData: FormData): Promise<FormStat
   }
 
   try {
-    await sendNewsletterEmails(value.email, value.source);
+    await sendNewsletterConfirmation(value.email);
   } catch (emailError) {
     console.warn(
       "Newsletter signup was saved, but the email failed:",

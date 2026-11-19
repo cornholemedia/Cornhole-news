@@ -1,16 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { adminClient } from "@/lib/admin-session";
-import { getAllNewsletterSubscribers, subscribersToCsv } from "@/lib/newsletter";
+import {
+  getAllNewsletterSubscribers,
+  normalizeSubscriberSearch,
+  subscribersToCsv,
+} from "@/lib/newsletter";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const { error: adminError } = await adminClient();
   if (adminError) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { rows, error } = await getAllNewsletterSubscribers();
+  const search = normalizeSubscriberSearch(request.nextUrl.searchParams.get("q"));
+  const { rows, error } = await getAllNewsletterSubscribers(search);
   if (error) {
     return NextResponse.json({ error }, { status: 500 });
   }
