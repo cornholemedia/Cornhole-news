@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import FollowLinks from "@/components/FollowLinks";
 import { createClient } from "@/lib/supabase/client";
 
 type NavItem = { href: string; label: string; external?: boolean };
@@ -187,16 +188,19 @@ export default function Header({
             <span className="truncate">Cornhole News</span>
           </Link>
 
-          <button
-            type="button"
-            className="inline-flex shrink-0 items-center gap-2 rounded border border-[#3f679b]/40 bg-white/50 px-3 py-1.5 text-sm font-medium text-[#3f679b] lg:hidden"
-            aria-expanded={menuOpen}
-            aria-controls="site-menu"
-            onClick={toggleMenu}
-          >
-            <MenuIcon open={menuOpen} />
-            {menuOpen ? "Close" : "Menu"}
-          </button>
+          <div className="flex shrink-0 items-center gap-2 lg:hidden">
+            <FollowLinks variant="header" />
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center gap-2 rounded border border-[#3f679b]/40 bg-white/50 px-3 py-1.5 text-sm font-medium text-[#3f679b]"
+              aria-expanded={menuOpen}
+              aria-controls="site-menu"
+              onClick={toggleMenu}
+            >
+              <MenuIcon open={menuOpen} />
+              {menuOpen ? "Close" : "Menu"}
+            </button>
+          </div>
 
           <nav
             aria-label="Main"
@@ -210,10 +214,16 @@ export default function Header({
             ))}
 
             <span className="mx-1 text-[#3f679b]/50">|</span>
-            {username === undefined ? null : username ? (
-              <span className="flex items-center gap-2">{renderAuthLinks()}</span>
-            ) : (
-              renderAuthLinks()
+            <FollowLinks variant="header" />
+            {username === undefined ? null : (
+              <>
+                <span className="mx-1 text-[#3f679b]/50">|</span>
+                {username ? (
+                  <span className="flex items-center gap-2">{renderAuthLinks()}</span>
+                ) : (
+                  renderAuthLinks()
+                )}
+              </>
             )}
           </nav>
         </div>
