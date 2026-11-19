@@ -39,6 +39,7 @@ voting, comments).
    - `supabase/migrations/20261027_tweet_draft.sql`
    - `supabase/migrations/20261102_admin_mfa_aal.sql`
    - `supabase/migrations/20261104_site_announcement.sql`
+   - `supabase/migrations/20261119_faq_page.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -318,6 +319,7 @@ accounts that are not admins.
    - `supabase/migrations/20261027_tweet_draft.sql`
    - `supabase/migrations/20261102_admin_mfa_aal.sql`
    - `supabase/migrations/20261104_site_announcement.sql`
+   - `supabase/migrations/20261119_faq_page.sql`
    The first reserves username `Cornhole_Admin` and adds bans. The second
    limits posts and comments and freezes `created_at`. The third stops
    anonymous writes to the contact, newsletter, and job tables, and to the
@@ -339,6 +341,9 @@ accounts that are not admins.
    Digest ingest is unchanged.
    The eleventh adds the site announcement banner. Visitors can read it only
    while it is on. Admins edit it at `/admin/announcement`.
+   The twelfth stores the FAQ page. Admins rewrite it at `/admin`, the same
+   way as About. Saving refreshes the public `/faq` page. A later run of this
+   file does not replace text that is already saved.
    Re-running `20261017_content_guards.sql` puts the caps back on digest publish;
    run the sixth file again if you do that. Re-running `20260923_editable_pages.sql`
    after the ban file removes the ban guard. Run `20261017_user_bans.sql` again

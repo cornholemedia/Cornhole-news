@@ -120,11 +120,11 @@ export default function ShowPoliticsToggle({ showPolitics, page }: ShowPoliticsT
           />
           <span
             aria-hidden="true"
-            className="absolute inset-0 rounded-full border border-[#5c5c5c] bg-[#e7e4da] transition-colors peer-checked:border-[#3f679b] peer-checked:bg-[#3f679b] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-solid peer-focus-visible:outline-[#1a1a1a] motion-reduce:transition-none"
+            className="switch-track absolute inset-0 rounded-full transition-colors motion-reduce:transition-none"
           />
           <span
             aria-hidden="true"
-            className="absolute left-0.5 h-5 w-5 rounded-full bg-[#3a3a3a] transition-transform peer-checked:translate-x-5 peer-checked:bg-white motion-reduce:transition-none"
+            className="switch-knob absolute left-0.5 h-5 w-5 rounded-full transition-transform peer-checked:translate-x-5 motion-reduce:transition-none"
           />
         </span>
         Show politics

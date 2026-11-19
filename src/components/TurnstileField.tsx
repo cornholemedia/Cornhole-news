@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TURNSTILE_FIELD } from "@/lib/turnstile-shared";
+import { THEME_EVENT } from "@/lib/theme";
 
 const SCRIPT_ID = "cf-turnstile-script";
 const SCRIPT_SRC =
@@ -59,6 +60,15 @@ export default function TurnstileField({ resetKey = "" }: TurnstileFieldProps) {
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ?? "";
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
+  const [themeTick, setThemeTick] = useState(0);
+
+  useEffect(() => {
+    function onTheme() {
+      setThemeTick((tick) => tick + 1);
+    }
+    window.addEventListener(THEME_EVENT, onTheme);
+    return () => window.removeEventListener(THEME_EVENT, onTheme);
+  }, []);
 
   useEffect(() => {
     if (!siteKey || !containerRef.current) return;
@@ -70,7 +80,7 @@ export default function TurnstileField({ resetKey = "" }: TurnstileFieldProps) {
         if (!active || !element.isConnected) return;
         widgetId.current = turnstile.render(element, {
           sitekey: siteKey,
-          theme: "light",
+          theme: document.documentElement.classList.contains("dark") ? "dark" : "light",
         });
       })
       .catch(() => {
@@ -85,7 +95,7 @@ export default function TurnstileField({ resetKey = "" }: TurnstileFieldProps) {
         widgetId.current = null;
       }
     };
-  }, [resetKey, siteKey]);
+  }, [resetKey, siteKey, themeTick]);
 
   if (!siteKey) return null;
 

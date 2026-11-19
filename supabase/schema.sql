@@ -307,9 +307,9 @@ left join (
   select post_id, count(*) as comment_count from public.comments group by post_id
 ) c on c.post_id = p.id;
 
--- 6. Editable static pages (About, Jobs, Advertise, Privacy, Terms, Contact)
+-- 6. Editable static pages (About, FAQ, Jobs, Advertise, Privacy, Terms, Contact)
 create table if not exists public.pages (
-  slug text primary key check (slug in ('about', 'jobs', 'advertise', 'privacy', 'terms', 'contact')),
+  slug text primary key check (slug in ('about', 'faq', 'jobs', 'advertise', 'privacy', 'terms', 'contact')),
   title text not null check (char_length(title) between 1 and 200),
   subtitle text not null default '' check (char_length(subtitle) <= 400),
   body text not null default '' check (char_length(body) <= 20000),

@@ -25,7 +25,7 @@ export default async function AdminPagesIndex() {
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-2 text-2xl font-bold">Edit pages</h1>
       <p className="mb-6 text-[15px] leading-relaxed text-[#666]">
-        Change About, Jobs, Advertise, Privacy, Terms, and Contact. The email addresses
+        Change About, FAQ, Jobs, Advertise, Privacy, Terms, and Contact. The email addresses
         below are where the contact form and new job postings are sent. Review employer
         job posts here before they appear on the jobs page. Newsletter signups from the
         footer are listed here too. Posts still go through{" "}
@@ -108,6 +108,7 @@ export default async function AdminPagesIndex() {
           Privacy, Terms, and Contact, open the Supabase SQL editor and run{" "}
           <code>supabase/migrations/20260930_legal_pages.sql</code>, then{" "}
           <code>supabase/migrations/20261007_legal_pages_text.sql</code>.
+          To store the FAQ, run <code>supabase/migrations/20261119_faq_page.sql</code>.
         </p>
       )}
 

@@ -86,9 +86,7 @@ export default function VoteButton({ postId }: VoteButtonProps) {
       onClick={handleClick}
       disabled={isPending}
       aria-label={voted ? "Remove upvote" : "Upvote"}
-      className={`mt-0.5 text-[13px] leading-none ${
-        voted ? "text-[#ff6600]" : "text-[#999] hover:text-[#ff6600]"
-      }`}
+      className={`vote-arrow mt-0.5 text-[13px] leading-none ${voted ? "is-voted" : ""}`}
       title={voted ? "Remove your upvote" : "Upvote"}
     >
       ▲

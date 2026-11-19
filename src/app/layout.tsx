@@ -8,10 +8,12 @@ import Header from "@/components/Header";
 import AdSidebar from "@/components/AdSidebar";
 import NewsletterSignup from "@/components/NewsletterSignup";
 import FollowLinks from "@/components/FollowLinks";
+import ThemeToggle from "@/components/ThemeToggle";
 import { POLITICS_PREFERENCE_SCRIPT } from "@/lib/politics-preference";
 import { rssAlternateTypes } from "@/lib/seo";
 import { DEFAULT_DESCRIPTION, SITE_NAME, advertiseEnabled, getSiteUrl, publicMerchHref } from "@/lib/site";
 import { getSiteLogoSrc } from "@/lib/site-logo";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
@@ -54,8 +56,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-[#f6f6ef] font-sans text-black">
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <head>
+        <script id="theme-init" dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="flex min-h-full flex-col font-sans">
         <Script id="show-politics-preference" strategy="beforeInteractive">
           {POLITICS_PREFERENCE_SCRIPT}
         </Script>
@@ -74,12 +79,17 @@ export default function RootLayout({
           <AdSidebar />
         </div>
 
-        <footer className="border-t border-[#e0e0e0] py-6 text-center text-sm text-[#666]">
+        <footer className="site-footer py-6 text-center text-sm">
           <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-4 px-4">
             <NewsletterSignup />
             <p>Cornhole News · Built for the community</p>
             <FollowLinks tone="footer" />
+            <ThemeToggle labelled />
             <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+              <Link href="/faq" className="hover:underline">
+                FAQ
+              </Link>
+              <span aria-hidden="true">·</span>
               <Link href="/contact" className="hover:underline">
                 Contact
               </Link>
