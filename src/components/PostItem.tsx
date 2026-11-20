@@ -3,6 +3,7 @@ import type { PostWithStats } from "@/lib/posts";
 import { formatTimeAgo } from "@/lib/time";
 import LivePoints from "./LivePoints";
 import PoliticsBadge from "./PoliticsBadge";
+import StoryStateLine from "./StoryStateLine";
 import VoteButton from "./VoteButton";
 
 type PostItemProps = {
@@ -37,6 +38,7 @@ export default function PostItem({ post, rank }: PostItemProps) {
           {post.is_political ? <PoliticsBadge /> : null}
           {domain ? <span className="ml-1 text-sm text-[#666]">({domain})</span> : null}
         </div>
+        <StoryStateLine code={post.state} />
 
         <div className="mt-0.5 text-[13px] text-[#666]">
           <LivePoints postId={post.id} points={post.points} /> by{" "}

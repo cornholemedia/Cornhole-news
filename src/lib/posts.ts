@@ -13,6 +13,8 @@ export type PostWithStats = {
   points: number;
   comment_count: number;
   is_political: boolean;
+  /** Uppercase Midwest code, or null when the story has no single state. */
+  state: string | null;
 };
 
 /** Stories shown on one homepage page. */

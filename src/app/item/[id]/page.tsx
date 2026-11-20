@@ -6,6 +6,7 @@ import Comments from "@/components/Comments";
 import MobileAd from "@/components/MobileAd";
 import AdminPostControls from "@/components/AdminPostControls";
 import PoliticsBadge from "@/components/PoliticsBadge";
+import StoryStateLine from "@/components/StoryStateLine";
 import LivePoints from "@/components/LivePoints";
 import { postLinkHost, safePostUrl } from "@/lib/post-fields";
 import { getPostById, getSitemapPosts } from "@/lib/posts";
@@ -79,6 +80,7 @@ export default async function ItemPage({
           {post.is_political ? <PoliticsBadge /> : null}
           {domain ? <span className="ml-1 text-sm text-[#666]">({domain})</span> : null}
         </div>
+        <StoryStateLine code={post.state} />
 
         <div className="mt-1 text-[13px] text-[#666]">
           <LivePoints postId={post.id} points={post.points} /> by{" "}

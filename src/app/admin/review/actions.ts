@@ -5,10 +5,12 @@ import {
   DIGEST_MIGRATION_HINT,
   DIGEST_POLITICS_HINT,
   DIGEST_PUBLISH_ONE_HINT,
+  DIGEST_STATE_HINT,
   DIGEST_TWEET_HINT,
   missingDigestSchema,
   parseDigestDate,
 } from "@/lib/digest";
+import { cleanStoryState } from "@/lib/story-state";
 import { cleanTweetDraft } from "@/lib/tweet";
 import { adminClient } from "@/lib/admin-session";
 import { revalidatePublicStories } from "@/lib/revalidate-public";
@@ -41,6 +43,12 @@ function actionError(error: { message: string; code?: string }): string {
     /column|schema cache|does not exist|function/i.test(error.message)
   ) {
     return DIGEST_TWEET_HINT;
+  }
+  if (
+    /story_state|set_digest_story_state/i.test(error.message) &&
+    /column|schema cache|does not exist|function/i.test(error.message)
+  ) {
+    return DIGEST_STATE_HINT;
   }
   if (/publish_digest_story/i.test(error.message)) return DIGEST_PUBLISH_ONE_HINT;
   if (missingDigestSchema(error.message)) return DIGEST_MIGRATION_HINT;
@@ -126,6 +134,45 @@ export async function setDigestStoryPolitics(
 
   if (saveError) {
     console.error("Could not save a digest politics flag:", saveError.message);
+    return { ok: false, error: actionError(saveError) };
+  }
+
+  const postId = data == null ? null : Number(data);
+  if (postId != null && (!Number.isInteger(postId) || postId <= 0)) {
+    return { ok: false, error: "That story could not be saved." };
+  }
+
+  revalidateDigest(postId != null, postId ?? undefined);
+  return {
+    ok: true,
+    message: postId != null ? "Updated the post." : "Saved.",
+    postId: postId ?? undefined,
+  };
+}
+
+export async function setDigestStoryState(
+  id: string,
+  state: string | null
+): Promise<DigestActionResult> {
+  if (!STORY_ID.test(id) || (state !== null && typeof state !== "string")) {
+    return { ok: false, error: "That story could not be found." };
+  }
+
+  const cleaned = cleanStoryState(state ?? "");
+  if (!cleaned.ok) return { ok: false, error: cleaned.error };
+
+  const { supabase, error } = await adminClient();
+  if (error || !supabase) {
+    return { ok: false, error: error ?? "You need an admin account to do that." };
+  }
+
+  const { data, error: saveError } = await supabase.rpc("set_digest_story_state", {
+    p_id: id,
+    p_state: cleaned.value,
+  });
+
+  if (saveError) {
+    console.error("Could not save a digest story state:", saveError.message);
     return { ok: false, error: actionError(saveError) };
   }
 

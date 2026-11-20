@@ -52,6 +52,7 @@ export function friendlyWriteError(message: string): string {
     return message;
   }
   if (/posts_url_format_check/i.test(message)) return "Enter a valid http or https link.";
+  if (/posts_state_check/i.test(message)) return "Choose a Midwest state, or leave it blank.";
   if (/posts_body_length_check/i.test(message)) {
     return "The text must be 10,000 characters or fewer.";
   }

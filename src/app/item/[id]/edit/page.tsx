@@ -5,8 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import PoliticsField from "@/components/PoliticsField";
+import StateField from "@/components/StateField";
 import { revalidatePublishedPost } from "@/app/item/actions";
 import { cleanPostBody, cleanPostTitle, safePostUrl } from "@/lib/post-fields";
+import { cleanStoryState, missingPostStateColumn, STORY_STATE_MIGRATION_HINT } from "@/lib/story-state";
 
 type PostRow = {
   id: number;
@@ -15,6 +17,7 @@ type PostRow = {
   body: string | null;
   author_id: string;
   is_political: boolean;
+  state?: string | null;
 };
 
 export default function EditPostPage() {
@@ -27,6 +30,7 @@ export default function EditPostPage() {
   const [url, setUrl] = useState("");
   const [body, setBody] = useState("");
   const [isPolitical, setIsPolitical] = useState(false);
+  const [state, setState] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,19 +49,30 @@ export default function EditPostPage() {
         return;
       }
 
-      const [{ data: profile }, { data: post, error: postError }] =
-        await Promise.all([
-          supabase
-            .from("profiles")
-            .select("is_admin")
-            .eq("id", user.id)
-            .single(),
-          supabase
-            .from("posts")
-            .select("id, title, url, body, author_id, is_political")
-            .eq("id", postId)
-            .single(),
-        ]);
+      const profileQuery = supabase
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", user.id)
+        .single();
+      let postQuery = await supabase
+        .from("posts")
+        .select("id, title, url, body, author_id, is_political, state")
+        .eq("id", postId)
+        .single();
+      if (
+        postQuery.error &&
+        missingPostStateColumn(postQuery.error.message)
+      ) {
+        postQuery = await supabase
+          .from("posts")
+          .select("id, title, url, body, author_id, is_political")
+          .eq("id", postId)
+          .single();
+      }
+      const [{ data: profile }, { data: post, error: postError }] = await Promise.all([
+        profileQuery,
+        Promise.resolve(postQuery),
+      ]);
 
       if (!active) return;
 
@@ -80,6 +95,7 @@ export default function EditPostPage() {
       setUrl(row.url ?? "");
       setBody(row.body ?? "");
       setIsPolitical(row.is_political === true);
+      setState(typeof row.state === "string" ? row.state : "");
       setAllowed(true);
       setLoading(false);
     }
@@ -117,6 +133,13 @@ export default function EditPostPage() {
       return;
     }
 
+    const nextState = cleanStoryState(state);
+    if (!nextState.ok) {
+      setSaving(false);
+      setError(nextState.error);
+      return;
+    }
+
     const payload = {
       title: nextTitle,
       url: nextUrl,
@@ -124,14 +147,25 @@ export default function EditPostPage() {
       is_political: isPolitical,
     };
 
-    const { error: updateError } = await supabase
+    let { error: updateError } = await supabase
       .from("posts")
-      .update(payload)
+      .update({ ...payload, state: nextState.value })
       .eq("id", postId);
+
+    if (updateError && nextState.value === null && missingPostStateColumn(updateError.message)) {
+      const retry = await supabase.from("posts").update(payload).eq("id", postId);
+      updateError = retry.error;
+    }
 
     setSaving(false);
     if (updateError) {
-      setError(updateError.message);
+      if (missingPostStateColumn(updateError.message)) {
+        setError(STORY_STATE_MIGRATION_HINT);
+      } else if (/posts_state_check/i.test(updateError.message)) {
+        setError("Choose a Midwest state, or leave it blank.");
+      } else {
+        setError(updateError.message);
+      }
       return;
     }
 
@@ -198,6 +232,8 @@ export default function EditPostPage() {
             className="field-input"
           />
         </div>
+
+        <StateField id="edit-state" value={state} onChange={setState} />
 
         <PoliticsField id="edit-politics" checked={isPolitical} onChange={setIsPolitical} />
 

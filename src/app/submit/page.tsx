@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PoliticsField from "@/components/PoliticsField";
+import StateField from "@/components/StateField";
 import TurnstileField from "@/components/TurnstileField";
 import { submitPost } from "@/app/submit/actions";
 
@@ -15,6 +16,7 @@ export default function SubmitPage() {
   const [url, setUrl] = useState("");
   const [body, setBody] = useState("");
   const [isPolitical, setIsPolitical] = useState(false);
+  const [state, setState] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [generatingTitle, setGeneratingTitle] = useState(false);
@@ -153,6 +155,8 @@ export default function SubmitPage() {
             className="field-input"
           />
         </div>
+
+        <StateField id="submit-state" name="state" value={state} onChange={setState} />
 
         <PoliticsField
           id="submit-politics"

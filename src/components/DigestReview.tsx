@@ -8,9 +8,11 @@ import {
   deletePendingDigestStories,
   publishDigestStory,
   setDigestStoryPolitics,
+  setDigestStoryState,
   type DigestActionResult,
 } from "@/app/admin/review/actions";
 import TweetDraftField from "@/components/TweetDraftField";
+import { MIDWEST_STATES } from "@/lib/midwest-states";
 import { reviewStoryCollapsed } from "@/lib/review-card";
 
 type ReviewStory = {
@@ -22,6 +24,7 @@ type ReviewStory = {
   postId: number | null;
   isPolitical: boolean;
   tweetText: string;
+  storyState: string | null;
 };
 
 type ReviewGroup = {
@@ -37,7 +40,7 @@ type DateChoice = {
 
 type PendingAction = {
   id: string;
-  action: "publish" | "delete" | "finish" | "politics";
+  action: "publish" | "delete" | "finish" | "politics" | "state";
 };
 
 export default function DigestReview({
@@ -48,6 +51,7 @@ export default function DigestReview({
   pendingCount,
   moreWaiting,
   politicsReady,
+  statesReady,
   botReady,
 }: {
   dates: DateChoice[];
@@ -57,6 +61,7 @@ export default function DigestReview({
   pendingCount: number;
   moreWaiting: number;
   politicsReady: boolean;
+  statesReady: boolean;
   botReady: boolean;
 }) {
   const router = useRouter();
@@ -64,6 +69,8 @@ export default function DigestReview({
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [flags, setFlags] = useState<Record<string, boolean>>({});
   const [flagSource, setFlagSource] = useState(groups);
+  const [stateChoices, setStateChoices] = useState<Record<string, string>>({});
+  const [stateSource, setStateSource] = useState(groups);
   const [message, setMessage] = useState<string | null>(null);
   const [postId, setPostId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +82,26 @@ export default function DigestReview({
     setFlags((current) => {
       const known = new Map(
         groups.flatMap((group) => group.stories.map((story) => [story.id, story.isPolitical] as const))
+      );
+      let changed = false;
+      const next = { ...current };
+      for (const [id, value] of Object.entries(current)) {
+        if (known.get(id) === value) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }
+
+  if (stateSource !== groups) {
+    setStateSource(groups);
+    setStateChoices((current) => {
+      const known = new Map(
+        groups.flatMap((group) =>
+          group.stories.map((story) => [story.id, story.storyState ?? ""] as const)
+        )
       );
       let changed = false;
       const next = { ...current };
@@ -152,6 +179,44 @@ export default function DigestReview({
       setFlags((current) => {
         const copy = { ...current };
         delete copy[storyId];
+        return copy;
+      });
+      setError("That could not be saved.");
+    } finally {
+      busyRef.current = false;
+      setPending(null);
+    }
+  }
+
+  async function onState(storyId: string, next: string) {
+    if (busyRef.current || !statesReady) return;
+    const previous = stateChoices[storyId];
+    busyRef.current = true;
+    setStateChoices((current) => ({ ...current, [storyId]: next }));
+    setPending({ id: storyId, action: "state" });
+    setError(null);
+    setMessage(null);
+    setPostId(null);
+    try {
+      const result = await setDigestStoryState(storyId, next || null);
+      if (!result.ok) {
+        setStateChoices((current) => {
+          const copy = { ...current };
+          if (previous === undefined) delete copy[storyId];
+          else copy[storyId] = previous;
+          return copy;
+        });
+        setError(result.error);
+        return;
+      }
+      setMessage(result.message);
+      setPostId(result.postId ?? null);
+      router.refresh();
+    } catch {
+      setStateChoices((current) => {
+        const copy = { ...current };
+        if (previous === undefined) delete copy[storyId];
+        else copy[storyId] = previous;
         return copy;
       });
       setError("That could not be saved.");
@@ -254,6 +319,7 @@ export default function DigestReview({
                 const publishing = pending?.id === story.id && pending.action === "publish";
                 const deleting = pending?.id === story.id && pending.action === "delete";
                 const checked = flags[story.id] ?? story.isPolitical;
+                const selectedState = stateChoices[story.id] ?? story.storyState ?? "";
                 const status = publishedNow[story.id] ? "published" : story.status;
                 const collapsed = reviewStoryCollapsed(status, expanded[story.id] === true);
                 if (collapsed) {
@@ -315,6 +381,27 @@ export default function DigestReview({
                       {story.body}
                     </p>
                     <TweetDraftField storyId={story.id} initialText={story.tweetText} />
+                    {statesReady ? (
+                      <div className="mt-4 max-w-xs">
+                        <label htmlFor={`state-${story.id}`} className="field-label">
+                          State
+                        </label>
+                        <select
+                          id={`state-${story.id}`}
+                          value={selectedState}
+                          disabled={busy}
+                          onChange={(event) => onState(story.id, event.target.value)}
+                          className="field-input min-h-11 text-base"
+                        >
+                          <option value="">None</option>
+                          {MIDWEST_STATES.map((item) => (
+                            <option key={item.code} value={item.code}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : null}
                     <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                       <label
                         htmlFor={`politics-${story.id}`}

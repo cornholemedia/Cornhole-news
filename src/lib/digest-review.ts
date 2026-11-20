@@ -4,8 +4,10 @@ import {
   DIGEST_MIGRATION_HINT,
   DIGEST_POLITICS_HINT,
   DIGEST_SECTIONS,
+  DIGEST_STATE_HINT,
   DIGEST_TWEET_HINT,
   missingDigestPoliticsColumn,
+  missingDigestStoryStateColumn,
   missingDigestTweetColumn,
   digestPostBody,
   formatDigestDate,
@@ -14,6 +16,7 @@ import {
   missingDigestSchema,
   parseDigestDate,
 } from "@/lib/digest";
+import { isMidwestState } from "@/lib/midwest-states";
 import { digestShareUrl, suggestedTweet } from "@/lib/tweet";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -32,6 +35,7 @@ export type DigestReviewStory = {
   postId: number | null;
   isPolitical: boolean;
   tweetText: string;
+  storyState: string | null;
 };
 
 export type DigestReviewGroup = {
@@ -54,6 +58,7 @@ export type DigestReview = {
   moreWaiting: number;
   politicsReady: boolean;
   tweetsReady: boolean;
+  statesReady: boolean;
   botReady: boolean;
   botIsAdmin: boolean;
   loadError: string | null;
@@ -77,6 +82,7 @@ type StoryRow = {
   post_id: number | string | null;
   is_political?: boolean | null;
   tweet_draft?: string | null;
+  story_state?: string | null;
 };
 
 const emptyReview: DigestReview = {
@@ -88,6 +94,7 @@ const emptyReview: DigestReview = {
   moreWaiting: 0,
   politicsReady: true,
   tweetsReady: true,
+  statesReady: true,
   botReady: false,
   botIsAdmin: false,
   loadError: null,
@@ -189,6 +196,7 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
       moreWaiting: 0,
       politicsReady: true,
       tweetsReady: true,
+      statesReady: true,
       // A failed profile lookup should not pretend the author is missing.
       botReady: Boolean(botResult.error) || Boolean(bot?.id),
       botIsAdmin: Boolean(bot?.is_admin),
@@ -199,8 +207,13 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
 
     let politicsReady = true;
     let tweetsReady = true;
+    let statesReady = true;
 
-    const loadStories = (includePolitics: boolean, includeTweet: boolean) => {
+    const loadStories = (
+      includePolitics: boolean,
+      includeTweet: boolean,
+      includeState: boolean
+    ) => {
       const columns = [
         "id",
         "section",
@@ -213,6 +226,7 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
         "post_id",
         ...(includePolitics ? ["is_political"] : []),
         ...(includeTweet ? ["tweet_draft"] : []),
+        ...(includeState ? ["story_state"] : []),
       ].join(", ");
       return supabase
         .from("digest_stories")
@@ -225,15 +239,19 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
         .limit(800);
     };
 
-    let loaded = await loadStories(true, true);
+    let loaded = await loadStories(true, true, true);
+    if (loaded.error && missingDigestStoryStateColumn(loaded.error.message)) {
+      statesReady = false;
+      loaded = await loadStories(true, true, false);
+    }
     if (loaded.error && missingDigestTweetColumn(loaded.error.message)) {
       tweetsReady = false;
-      loaded = await loadStories(true, false);
+      loaded = await loadStories(true, false, statesReady);
     }
     if (loaded.error && missingDigestPoliticsColumn(loaded.error.message)) {
       politicsReady = false;
       tweetsReady = false;
-      loaded = await loadStories(false, false);
+      loaded = await loadStories(false, false, statesReady);
     }
 
     const error = loaded.error;
@@ -245,18 +263,22 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
         ...review,
         politicsReady,
         tweetsReady,
-        loadError: missingDigestTweetColumn(error.message)
-          ? DIGEST_TWEET_HINT
-          : missingDigestPoliticsColumn(error.message)
-            ? DIGEST_POLITICS_HINT
-            : missingDigestSchema(error.message)
-              ? DIGEST_MIGRATION_HINT
-              : error.message,
+        statesReady,
+        loadError: missingDigestStoryStateColumn(error.message)
+          ? DIGEST_STATE_HINT
+          : missingDigestTweetColumn(error.message)
+            ? DIGEST_TWEET_HINT
+            : missingDigestPoliticsColumn(error.message)
+              ? DIGEST_POLITICS_HINT
+              : missingDigestSchema(error.message)
+                ? DIGEST_MIGRATION_HINT
+                : error.message,
       };
     }
 
     review.politicsReady = politicsReady;
     review.tweetsReady = tweetsReady;
+    review.statesReady = statesReady;
 
     const buckets = new Map<string, DigestReviewStory[]>();
     for (const section of DIGEST_SECTIONS) buckets.set(section, []);
@@ -274,6 +296,10 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
         status: row.status,
         postId: storyPostId,
         isPolitical: politicsReady && row.is_political === true,
+        storyState:
+          statesReady && typeof row.story_state === "string" && isMidwestState(row.story_state)
+            ? row.story_state
+            : null,
         tweetText: suggestedTweet(
           tweetsReady ? row.tweet_draft : null,
           row.headline,

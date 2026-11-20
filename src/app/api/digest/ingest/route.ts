@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   DIGEST_MIN_SECRET_LENGTH,
   bearerMatches,
+  DIGEST_STATE_HINT,
   missingDigestSchema,
+  missingDigestStoryStateColumn,
   parseIngestPayload,
 } from "@/lib/digest";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -84,6 +86,9 @@ export async function POST(request: NextRequest) {
     console.error("Digest ingest failed:", error.message);
     if (error.message.startsWith("digest:")) {
       return json({ error: error.message.slice("digest:".length).trim() }, 400);
+    }
+    if (missingDigestStoryStateColumn(error.message)) {
+      return json({ error: DIGEST_STATE_HINT }, 503);
     }
     if (missingDigestSchema(error.message)) {
       return json(
