@@ -10,6 +10,7 @@ import {
   parseIngestPayload,
   recentDigestWindow,
 } from "./digest.ts";
+import { MIDWEST_STATES } from "./story-state.ts";
 
 const migration = readFileSync(
   new URL("../../supabase/migrations/20261013_digest_stories.sql", import.meta.url),
@@ -461,4 +462,96 @@ test("ingest stores an optional tweet_draft and leaves a saved one alone", () =>
   assert.equal(reviewUi.includes('rel="noopener noreferrer"'), false);
   assert.match(reviewUi, /target="_blank"/);
   assert.match(reviewUi, /xIntentUrl/);
+});
+
+test("ingest accepts an optional Midwest story_state and leaves it off when omitted", () => {
+  const stateMigration = readFileSync(
+    new URL("../../supabase/migrations/20261120_story_state.sql", import.meta.url),
+    "utf8"
+  );
+  const actions = readFileSync(new URL("../app/admin/review/actions.ts", import.meta.url), "utf8");
+  const reviewUi = readFileSync(new URL("../components/DigestReview.tsx", import.meta.url), "utf8");
+
+  const omitted = parseIngestPayload({
+    digest_date: "2026-11-20",
+    stories: [{ ...story, url: "https://example.com/no-story-state" }],
+  });
+  assert.equal(omitted.ok, true);
+  if (omitted.ok) assert.equal("story_state" in omitted.value.stories[0], false);
+
+  const set = parseIngestPayload({
+    digest_date: "2026-11-20",
+    stories: [{ ...story, url: "https://example.com/story-state", story_state: " mn " }],
+  });
+  assert.equal(set.ok, true);
+  if (set.ok) assert.equal(set.value.stories[0]?.story_state, "MN");
+
+  const cleared = parseIngestPayload({
+    digest_date: "2026-11-20",
+    stories: [{ ...story, url: "https://example.com/clear-state", story_state: null }],
+  });
+  assert.equal(cleared.ok, true);
+  if (cleared.ok) assert.equal(cleared.value.stories[0]?.story_state, null);
+
+  const blank = parseIngestPayload({
+    digest_date: "2026-11-20",
+    stories: [{ ...story, url: "https://example.com/blank-state", story_state: "  " }],
+  });
+  assert.equal(blank.ok, true);
+  if (blank.ok) assert.equal(blank.value.stories[0]?.story_state, null);
+
+  for (const item of MIDWEST_STATES) {
+    const parsed = parseIngestPayload({
+      digest_date: "2026-11-20",
+      stories: [
+        {
+          ...story,
+          url: `https://example.com/state-${item.code.toLowerCase()}`,
+          story_state: item.code.toLowerCase(),
+        },
+      ],
+    });
+    assert.equal(parsed.ok, true);
+    if (parsed.ok) assert.equal(parsed.value.stories[0]?.story_state, item.code);
+  }
+
+  assert.equal(
+    parseIngestPayload({
+      digest_date: "2026-11-20",
+      stories: [{ ...story, url: "https://example.com/ny", story_state: "NY" }],
+    }).ok,
+    false
+  );
+  assert.equal(
+    parseIngestPayload({
+      digest_date: "2026-11-20",
+      stories: [{ ...story, url: "https://example.com/name", story_state: "Minnesota" }],
+    }).ok,
+    false
+  );
+
+  assert.match(stateMigration, /add column if not exists state text/);
+  assert.match(stateMigration, /posts_state_check/);
+  assert.match(stateMigration, /posts_state_created_idx/);
+  assert.match(stateMigration, /security_invoker = true/);
+  assert.match(stateMigration, /p\.state/);
+  assert.match(stateMigration, /add column if not exists story_state text/);
+  assert.match(stateMigration, /when i\.story_state_set then i\.story_state/);
+  assert.match(stateMigration, /else d\.story_state/);
+  assert.match(stateMigration, /story\.story_state/);
+  assert.match(stateMigration, /drop function if exists public\.infer_story_state_for_backfill/);
+  assert.match(
+    stateMigration,
+    /grant execute on function public\.set_digest_story_state\(uuid, text\) to authenticated/
+  );
+  assert.equal(
+    /grant execute on function public\.set_digest_story_state\(uuid, text\) to (anon|service_role)/.test(
+      stateMigration
+    ),
+    false
+  );
+  assert.match(stateMigration, /if not \(select public\.is_admin\(\)\) then/);
+  assert.match(actions, /set_digest_story_state/);
+  assert.match(reviewUi, /setDigestStoryState/);
+  assert.equal(reviewUi.includes("politics-tag"), false);
 });

@@ -40,6 +40,7 @@ voting, comments).
    - `supabase/migrations/20261102_admin_mfa_aal.sql`
    - `supabase/migrations/20261104_site_announcement.sql`
    - `supabase/migrations/20261119_faq_page.sql`
+   - `supabase/migrations/20261120_story_state.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -207,7 +208,7 @@ redeploys automatically.
 
 The job sends one day at a time. Stories stay in a private queue until an admin opens `/admin/review` and clicks **Publish** on each one. Each story has a Politics checkbox, off by default. Delete hides one story. **Finished** hides every story still waiting for the selected date and leaves published stories up. The date list is only the last 7 days in Chicago time, and only days that already have stories. Choosing a date loads it immediately. A later send of that same date and URL does not bring a deleted story back, and it does not change a story that was already published or clear its Politics checkbox. Links left out of a later send stay pending until you delete them. Nothing is posted automatically. Clicking Publish twice does not create two posts.
 
-Run `supabase/migrations/20261013_digest_stories.sql` in the Supabase SQL editor, then `supabase/migrations/20261014_publish_one_digest_story.sql`, then `supabase/migrations/20261015_digest_story_politics.sql`, then `supabase/migrations/20261016_digest_trade_industry.sql`, then `supabase/migrations/20261020_digest_politics_section.sql`, then `supabase/migrations/20261027_tweet_draft.sql`. Create the **Cornhole News** author using the steps at the top of the first digest file. Set `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel and redeploy.
+Run `supabase/migrations/20261013_digest_stories.sql` in the Supabase SQL editor, then `supabase/migrations/20261014_publish_one_digest_story.sql`, then `supabase/migrations/20261015_digest_story_politics.sql`, then `supabase/migrations/20261016_digest_trade_industry.sql`, then `supabase/migrations/20261020_digest_politics_section.sql`, then `supabase/migrations/20261027_tweet_draft.sql`, then `supabase/migrations/20261120_story_state.sql`. Create the **Cornhole News** author using the steps at the top of the first digest file. Set `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel and redeploy.
 
 ```bash
 curl -sS -X POST "https://cornholenews.news/api/digest/ingest" \
@@ -222,15 +223,16 @@ curl -sS -X POST "https://cornholenews.news/api/digest/ingest" \
         "url": "https://example.com/cornhole-champion",
         "paper": "Des Moines Register",
         "state": "IA",
+        "story_state": "IA",
         "synopsis": "A packed gym watched the final bags land."
       }
     ]
   }'
 ```
 
-`section` is exactly one of `QUIRKY`, `SERIOUS`, `POLITICS`, `AROUND THE MIDWEST`, `NATIONAL PRESS`, or `TRADE & INDUSTRY`. A markdown header is sent as that same text, so a `POLITICS` header is `"section": "POLITICS"`. `state` is the two-letter code that shows up as "Paper, ST". `url` must be `https`. Each story may include `"is_political": true` or `false`. The flag is stored as true when the section is `POLITICS` or the value is true. Each story may include `"tweet_draft"`, a string of at most 280 characters. It is trimmed. A blank value is stored as null, and the review page then suggests the headline and link. Sending the same pending URL again does not replace a tweet that was already saved. At most 100 stories per request. A successful response looks like `{"ok":true,"digest_date":"2026-10-13","inserted":1,"updated":0,"skipped":0}`. `skipped` means that URL was already published or deleted for that date and was left alone. Sending the same pending URL again can turn Politics on, and it leaves an existing on value on.
+`section` is exactly one of `QUIRKY`, `SERIOUS`, `POLITICS`, `AROUND THE MIDWEST`, `NATIONAL PRESS`, or `TRADE & INDUSTRY`. A markdown header is sent as that same text, so a `POLITICS` header is `"section": "POLITICS"`. `state` is the two-letter code that shows up as "Paper, ST". It can be any two letters. `url` must be `https`. Each story may include `"is_political": true` or `false`. The flag is stored as true when the section is `POLITICS` or the value is true. Each story may include `"tweet_draft"`, a string of at most 280 characters. It is trimmed. A blank value is stored as null, and the review page then suggests the headline and link. Sending the same pending URL again does not replace a tweet that was already saved. Each story may include `"story_state"`. That is the state shown under the title. Use one of `IL`, `IN`, `IA`, `KS`, `MI`, `MN`, `MO`, `NE`, `ND`, `OH`, `SD`, `WI`, or `null` to leave it blank. A blank value is for a regional story, a story about more than one state, or a state outside those twelve. When `story_state` is omitted, a new row copies `state` if that code is one of the twelve, and otherwise stays blank. Sending `story_state` again updates a pending row, including clearing it with `null`. Omitting it on a later send leaves the saved value alone, so an admin's choice on the review page sticks. `state` itself is unchanged and still appears only in the byline. At most 100 stories per request. A successful response looks like `{"ok":true,"digest_date":"2026-10-13","inserted":1,"updated":0,"skipped":0}`. `skipped` means that URL was already published or deleted for that date and was left alone. Sending the same pending URL again can turn Politics on, and it leaves an existing on value on.
 
-On the review page, choose a date from the last 7 Chicago days that have stories. The newest of those that still has waiting stories is selected by default, and changing the date loads it right away. **Publish** on a story creates one post: the headline is the title, the link is the URL, and the text is the synopsis plus ` — Paper, ST`. The author is Cornhole News. `is_political` follows that story's Politics checkbox. The story then shows as published, with a link to the new post. Turning Politics on or off after publishing updates the linked post. The checkbox is saved on the queue row, so a reload before publishing keeps it. Each story also has a tweet box. It starts as the saved `tweet_draft`, or as the headline plus the public story link when that story is already published, otherwise the source article link. Leaving the box saves the text. **Copy** copies it. **Post on X** opens X with that text. X is not connected to this site.
+On the review page, choose a date from the last 7 Chicago days that have stories. The newest of those that still has waiting stories is selected by default, and changing the date loads it right away. **Publish** on a story creates one post: the headline is the title, the link is the URL, and the text is the synopsis plus ` — Paper, ST`. The author is Cornhole News. `is_political` follows that story's Politics checkbox. `story_state` is copied onto the post and shown under the title as the full state name. The State menu on each story can change that before or after publishing. None leaves the line off. The story then shows as published, with a link to the new post. Turning Politics on or off after publishing updates the linked post. Changing the state does too. The checkbox is saved on the queue row, so a reload before publishing keeps it. Each story also has a tweet box. It starts as the saved `tweet_draft`, or as the headline plus the public story link when that story is already published, otherwise the source article link. Leaving the box saves the text. **Copy** copies it. **Post on X** opens X with that text. X is not connected to this site.
 
 ## Adding a logo
 
@@ -320,6 +322,7 @@ accounts that are not admins.
    - `supabase/migrations/20261102_admin_mfa_aal.sql`
    - `supabase/migrations/20261104_site_announcement.sql`
    - `supabase/migrations/20261119_faq_page.sql`
+   - `supabase/migrations/20261120_story_state.sql`
    The first reserves username `Cornhole_Admin` and adds bans. The second
    limits posts and comments and freezes `created_at`. The third stops
    anonymous writes to the contact, newsletter, and job tables, and to the
@@ -344,6 +347,9 @@ accounts that are not admins.
    The twelfth stores the FAQ page. Admins rewrite it at `/admin`, the same
    way as About. Saving refreshes the public `/faq` page. A later run of this
    file does not replace text that is already saved.
+   The thirteenth adds `posts.state` and `digest_stories.story_state`. Run it
+   after the tweet draft file. It does not change a state that is already set.
+   Stories it cannot place with confidence stay blank.
    Re-running `20261017_content_guards.sql` puts the caps back on digest publish;
    run the sixth file again if you do that. Re-running `20260923_editable_pages.sql`
    after the ban file removes the ban guard. Run `20261017_user_bans.sql` again

@@ -1,7 +1,23 @@
 import { isIP } from "node:net";
 import { timingSafeEqual } from "node:crypto";
 
-/** Keep these limits aligned with the digest migrations, including 20261027. */
+/** Same twelve codes as MIDWEST_STATES. Kept local so node:test can load this file. */
+const MIDWEST_STORY_STATE_CODES = new Set([
+  "IL",
+  "IN",
+  "IA",
+  "KS",
+  "MI",
+  "MN",
+  "MO",
+  "NE",
+  "ND",
+  "OH",
+  "SD",
+  "WI",
+]);
+
+/** Keep these limits aligned with the digest migrations, including 20261120. */
 export const DIGEST_SECTIONS = [
   "QUIRKY",
   "SERIOUS",
@@ -28,6 +44,9 @@ export const DIGEST_POLITICS_HINT =
 
 export const DIGEST_TWEET_HINT =
   "Tweet drafts need a database update. In Supabase, open the SQL editor and run supabase/migrations/20261027_tweet_draft.sql.";
+
+export const DIGEST_STATE_HINT =
+  "Story states need a database update. In Supabase, open the SQL editor and run supabase/migrations/20261120_story_state.sql.";
 
 /** How many Chicago calendar days the review date picker offers, including today. */
 export const DIGEST_REVIEW_DAYS = 7;
@@ -56,6 +75,12 @@ export type IngestStory = {
   synopsis: string;
   is_political: boolean;
   tweet_draft: string | null;
+  /**
+   * Present only when the request included story_state.
+   * Omitted means the database keeps a saved value, and a new row copies state
+   * when that code is one of the 12 Midwest states.
+   */
+  story_state?: string | null;
 };
 
 export type IngestPayload = {
@@ -281,6 +306,30 @@ export function parseIngestPayload(
       return { ok: false, error: storyError(storyNumber, "needs a two-letter state code.") };
     }
 
+    let storyState: string | null | undefined;
+    if ("story_state" in story) {
+      if (story.story_state == null) {
+        storyState = null;
+      } else if (typeof story.story_state !== "string") {
+        return {
+          ok: false,
+          error: storyError(storyNumber, "needs a Midwest state code, or null."),
+        };
+      } else {
+        const code = oneLine(story.story_state).toUpperCase();
+        if (!code) {
+          storyState = null;
+        } else if (!MIDWEST_STORY_STATE_CODES.has(code)) {
+          return {
+            ok: false,
+            error: storyError(storyNumber, "needs a Midwest state code, or null."),
+          };
+        } else {
+          storyState = code;
+        }
+      }
+    }
+
     const synopsis = oneLine(story.synopsis);
     if (!synopsis || synopsis.length > MAX_SYNOPSIS) {
       return {
@@ -327,6 +376,7 @@ export function parseIngestPayload(
       synopsis,
       is_political: isPolitical,
       tweet_draft: tweetDraft,
+      ...("story_state" in story ? { story_state: storyState ?? null } : {}),
     });
   }
 
@@ -358,6 +408,10 @@ export function missingDigestPoliticsColumn(message: string): boolean {
 
 export function missingDigestTweetColumn(message: string): boolean {
   return /tweet_draft/i.test(message) && /column|schema cache|does not exist/i.test(message);
+}
+
+export function missingDigestStoryStateColumn(message: string): boolean {
+  return /story_state/i.test(message) && /column|schema cache|does not exist|function/i.test(message);
 }
 
 export function missingDigestSchema(message: string): boolean {

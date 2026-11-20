@@ -2,6 +2,7 @@
 
 import { fieldValue } from "@/lib/form-fields";
 import { friendlyWriteError, cleanPostBody, cleanPostTitle, safePostUrl } from "@/lib/post-fields";
+import { cleanStoryState, missingPostStateColumn, STORY_STATE_MIGRATION_HINT } from "@/lib/story-state";
 import { recordIpAttempt } from "@/lib/rate-limit";
 import { requestClientIp, requestIpHash } from "@/lib/request-ip";
 import { revalidatePublicStories, revalidateUserProfile } from "@/lib/revalidate-public";
@@ -24,6 +25,9 @@ export async function submitPost(
   const body = cleanPostBody(fieldValue(formData.get("body")));
   if (body === null) return { ok: false, error: "The text must be 10,000 characters or fewer." };
 
+  const state = cleanStoryState(fieldValue(formData.get("state")));
+  if (!state.ok) return state;
+
   const human = await verifyTurnstileToken(
     fieldValue(formData.get(TURNSTILE_FIELD)),
     await requestClientIp()
@@ -39,19 +43,30 @@ export async function submitPost(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Log in to submit a story." };
 
-  const { data, error } = await supabase
+  const row = {
+    title,
+    url,
+    body: body || null,
+    is_political: formData.get("isPolitical") === "on",
+    author_id: user.id,
+  };
+
+  let { data, error } = await supabase
     .from("posts")
-    .insert({
-      title,
-      url,
-      body: body || null,
-      is_political: formData.get("isPolitical") === "on",
-      author_id: user.id,
-    })
+    .insert({ ...row, state: state.value })
     .select("id")
     .single();
 
+  if (error && state.value === null && missingPostStateColumn(error.message)) {
+    const retry = await supabase.from("posts").insert(row).select("id").single();
+    data = retry.data;
+    error = retry.error;
+  }
+
   if (error || !data) {
+    if (error && missingPostStateColumn(error.message)) {
+      return { ok: false, error: STORY_STATE_MIGRATION_HINT };
+    }
     return { ok: false, error: friendlyWriteError(error?.message ?? "") };
   }
 

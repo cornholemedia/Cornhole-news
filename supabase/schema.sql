@@ -173,7 +173,14 @@ create table if not exists public.posts (
   ),
   author_id uuid not null references public.profiles(id) on delete cascade,
   created_at timestamptz not null default now(),
-  is_political boolean not null default false
+  is_political boolean not null default false,
+  state text,
+  constraint posts_state_check check (
+    state is null
+    or state in (
+      'IL', 'IN', 'IA', 'KS', 'MI', 'MN', 'MO', 'NE', 'ND', 'OH', 'SD', 'WI'
+    )
+  )
 );
 
 alter table public.posts enable row level security;
@@ -297,7 +304,8 @@ select
   pr.username as author_username,
   coalesce(v.vote_count, 0) as points,
   coalesce(c.comment_count, 0) as comment_count,
-  p.is_political
+  p.is_political,
+  p.state
 from public.posts p
 join public.profiles pr on pr.id = p.author_id
 left join (
@@ -608,6 +616,8 @@ on conflict (slug) do nothing;
 -- then 20261027_tweet_draft.sql for the optional tweet on each digest story,
 -- then 20261102_admin_mfa_aal.sql so an admin with a verified authenticator
 -- must be aal2. Admins who have not enrolled are unchanged,
--- then 20261104_site_announcement.sql for the banner at the top of the site.
+-- then 20261104_site_announcement.sql for the banner at the top of the site,
+-- then 20261119_faq_page.sql for the FAQ page,
+-- then 20261120_story_state.sql for the state under each story title.
 -- Publishing uses a Cornhole News profile; the steps to create that profile
 -- are at the top of the digest file.

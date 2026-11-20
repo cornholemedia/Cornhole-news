@@ -1,22 +1,15 @@
 import { cleanEmail, cleanLine, cleanOptionalLine, cleanUrl } from "@/lib/form-fields";
+import {
+  MIDWEST_STATES,
+  isMidwestState,
+  midwestStateName,
+  type MidwestStateCode,
+} from "./midwest-states";
+
+export { MIDWEST_STATES, isMidwestState, midwestStateName, type MidwestStateCode };
 
 export const JOB_DESCRIPTION_MIN = 40;
 export const JOB_DESCRIPTION_MAX = 8000;
-
-export const MIDWEST_STATES = [
-  { code: "IL", name: "Illinois" },
-  { code: "IN", name: "Indiana" },
-  { code: "IA", name: "Iowa" },
-  { code: "KS", name: "Kansas" },
-  { code: "MI", name: "Michigan" },
-  { code: "MN", name: "Minnesota" },
-  { code: "MO", name: "Missouri" },
-  { code: "NE", name: "Nebraska" },
-  { code: "ND", name: "North Dakota" },
-  { code: "OH", name: "Ohio" },
-  { code: "SD", name: "South Dakota" },
-  { code: "WI", name: "Wisconsin" },
-] as const;
 
 export const WORK_TYPES = [
   { value: "on_site", label: "On-site" },
@@ -48,7 +41,6 @@ const EMPLOYMENT_SCHEMA: Record<EmploymentType, string> = {
   internship: "INTERN",
 };
 
-export type MidwestStateCode = (typeof MIDWEST_STATES)[number]["code"];
 export type WorkType = (typeof WORK_TYPES)[number]["value"];
 export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number]["value"];
 export type PayPeriod = (typeof PAY_PERIODS)[number]["value"];
@@ -97,14 +89,6 @@ export type PublicJobPosting = {
 
 const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 const MONEY_PATTERN = /^\d{1,8}(\.\d{1,2})?$/;
-
-export function isMidwestState(value: string): value is MidwestStateCode {
-  return MIDWEST_STATES.some((state) => state.code === value);
-}
-
-export function midwestStateName(code: string): string {
-  return MIDWEST_STATES.find((state) => state.code === code)?.name ?? code;
-}
 
 export function workTypeLabel(value: string): string {
   return WORK_TYPES.find((item) => item.value === value)?.label ?? value;
