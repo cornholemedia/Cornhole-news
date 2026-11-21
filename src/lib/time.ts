@@ -1,3 +1,8 @@
+/** Public clock for a story. Drip posts use their release time. */
+export function storyReleasedAt(post: { created_at: string; released_at?: string | null }): string {
+  return post.released_at || post.created_at;
+}
+
 export function formatTimeAgo(dateString: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
   const units: [number, string][] = [

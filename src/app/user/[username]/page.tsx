@@ -4,7 +4,7 @@ import PostList from "@/components/PostList";
 import { pageMeta } from "@/lib/seo";
 import { createPublicClient } from "@/lib/supabase/public";
 
-export const revalidate = 3600;
+export const revalidate = 180;
 
 export function generateStaticParams() {
   return [];
@@ -66,7 +66,8 @@ export default async function UserPage({
     .from("posts_with_stats")
     .select("*")
     .eq("author_id", profile.id)
-    .order("created_at", { ascending: false });
+    .order("released_at", { ascending: false })
+    .order("id", { ascending: false });
 
   return (
     <div>

@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
 import { getSitemapJobPostings } from "@/lib/job-postings";
 import { getSitemapPosts } from "@/lib/posts";
+import { SITEMAP_REVALIDATE_SECONDS } from "@/lib/public-cache";
 import { advertiseEnabled, getSiteUrl } from "@/lib/site";
 
-export const revalidate = 3600;
+export const revalidate = SITEMAP_REVALIDATE_SECONDS;
 
 const STATIC_PATHS = [
   "/",

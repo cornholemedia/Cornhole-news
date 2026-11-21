@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { formatTimeAgo } from "@/lib/time";
+import { formatTimeAgo, storyReleasedAt } from "@/lib/time";
 import Comments from "@/components/Comments";
 import MobileAd from "@/components/MobileAd";
 import AdminPostControls from "@/components/AdminPostControls";
@@ -12,7 +12,7 @@ import { postLinkHost, safePostUrl } from "@/lib/post-fields";
 import { getPostById, getSitemapPosts } from "@/lib/posts";
 import { pageMeta, summarize } from "@/lib/seo";
 
-export const revalidate = 3600;
+export const revalidate = 180;
 
 export async function generateStaticParams() {
   const posts = await getSitemapPosts();
@@ -87,7 +87,7 @@ export default async function ItemPage({
           <Link href={`/user/${post.author_username}`} className="hover:underline">
             {post.author_username}
           </Link>{" "}
-          {formatTimeAgo(post.created_at)}
+          {formatTimeAgo(storyReleasedAt(post))}
         </div>
 
         {post.body && (

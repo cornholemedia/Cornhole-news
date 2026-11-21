@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import HomeFeed, { homeFeedMetadata } from "@/components/HomeFeed";
 import { parseHomePageParam } from "@/lib/home-path";
 
-export const revalidate = 3600;
+export const revalidate = 180;
 
 export function generateStaticParams() {
   return [];

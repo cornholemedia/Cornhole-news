@@ -59,20 +59,33 @@ test("the politics cookie picks the cached top variant before paint", () => {
 test("public pages are cached and the proxy stays on admin", () => {
   assert.equal(FEED_REVALIDATE_SECONDS, 180);
   assert.equal(DOCUMENT_REVALIDATE_SECONDS, 3600);
-  assert.equal(SITEMAP_REVALIDATE_SECONDS, 3600);
+  assert.equal(SITEMAP_REVALIDATE_SECONDS, 180);
 
   const proxy = source("../proxy.ts");
   assert.match(proxy, /matcher:\s*\["\/admin", "\/admin\/:path\*"\]/);
   assert.equal(proxy.includes("_next/static"), false);
 
-  for (const file of ["../app/page.tsx", "../app/new/page.tsx", "../app/no-politics/page.tsx"]) {
+  for (const file of [
+    "../app/page.tsx",
+    "../app/new/page.tsx",
+    "../app/no-politics/page.tsx",
+    "../app/item/[id]/page.tsx",
+    "../app/user/[username]/page.tsx",
+    "../app/p/[page]/page.tsx",
+    "../app/no-politics/p/[page]/page.tsx",
+  ]) {
     const page = source(file);
     assert.match(page, /export const revalidate = 180/);
     assert.equal(page.includes("revalidate = 0"), false);
-    assert.equal(page.includes("searchParams"), false);
+    assert.equal(page.includes("cookies("), false);
+    assert.equal(page.includes("headers("), false);
   }
 
-  assert.match(source("../app/sitemap.ts"), /export const revalidate = 3600/);
+  for (const file of ["../app/page.tsx", "../app/new/page.tsx", "../app/no-politics/page.tsx"]) {
+    assert.equal(source(file).includes("searchParams"), false);
+  }
+
+  assert.match(source("../app/sitemap.ts"), /SITEMAP_REVALIDATE_SECONDS/);
   assert.equal(source("../app/sitemap.ts").includes("force-dynamic"), false);
   assert.equal(source("./announcement-public.ts").includes("connection("), false);
   assert.equal(source("./ads-public.ts").includes("connection("), false);

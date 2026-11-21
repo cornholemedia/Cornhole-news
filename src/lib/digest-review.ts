@@ -1,6 +1,7 @@
 import "server-only";
 import {
   DIGEST_BOT_USERNAME,
+  DIGEST_DRIP_HINT,
   DIGEST_MIGRATION_HINT,
   DIGEST_POLITICS_HINT,
   DIGEST_SECTIONS,
@@ -16,6 +17,7 @@ import {
   missingDigestSchema,
   parseDigestDate,
 } from "@/lib/digest";
+import { formatReleaseLabel } from "@/lib/drip-schedule";
 import { isMidwestState } from "@/lib/midwest-states";
 import { digestShareUrl, suggestedTweet } from "@/lib/tweet";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -36,6 +38,9 @@ export type DigestReviewStory = {
   isPolitical: boolean;
   tweetText: string;
   storyState: string | null;
+  publishAt: string | null;
+  releaseLabel: string;
+  scheduled: boolean;
 };
 
 export type DigestReviewGroup = {
@@ -62,6 +67,7 @@ export type DigestReview = {
   botReady: boolean;
   botIsAdmin: boolean;
   loadError: string | null;
+  scheduleHint: string | null;
 };
 
 type DateRow = {
@@ -98,10 +104,27 @@ const emptyReview: DigestReview = {
   botReady: false,
   botIsAdmin: false,
   loadError: null,
+  scheduleHint: null,
 };
 
 function choice(date: string, pendingCount: number): DigestDateChoice {
   return { date, label: formatDigestDate(date), pendingCount };
+}
+
+function releaseFields(
+  status: string,
+  postId: number | null,
+  releaseByPost: Map<number, string | null>,
+  loaded: boolean,
+  now: Date
+): Pick<DigestReviewStory, "publishAt" | "releaseLabel" | "scheduled"> {
+  if (status !== "published" || postId == null) {
+    return { publishAt: null, releaseLabel: "", scheduled: false };
+  }
+  if (!loaded) return { publishAt: null, releaseLabel: "Published", scheduled: false };
+  const publishAt = releaseByPost.get(postId) ?? null;
+  const release = formatReleaseLabel(publishAt, now);
+  return { publishAt, releaseLabel: release.label, scheduled: release.scheduled };
 }
 
 export async function getDigestAdminSummary(): Promise<DigestAdminSummary> {
@@ -201,6 +224,7 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
       botReady: Boolean(botResult.error) || Boolean(bot?.id),
       botIsAdmin: Boolean(bot?.is_admin),
       loadError: null,
+      scheduleHint: null,
     };
 
     if (!selectedDate) return review;
@@ -257,6 +281,34 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
     const error = loaded.error;
     const data = (loaded.data ?? null) as StoryRow[] | null;
 
+    const releaseByPost = new Map<number, string | null>();
+    let releaseTimesLoaded = false;
+    if (!error && data) {
+      const postIds = data
+        .map((row) => (row.post_id == null ? null : Number(row.post_id)))
+        .filter((id): id is number => id != null && Number.isInteger(id) && id > 0);
+      if (postIds.length === 0) {
+        releaseTimesLoaded = true;
+      } else {
+        const times = await supabase.from("posts").select("id, publish_at").in("id", postIds);
+        if (times.error) {
+          console.error("Error loading digest release times:", times.error.message);
+          review.scheduleHint =
+            /publish_at/i.test(times.error.message) &&
+            /column|schema cache|does not exist/i.test(times.error.message)
+              ? DIGEST_DRIP_HINT
+              : "Release times could not be loaded.";
+        } else {
+          releaseTimesLoaded = true;
+          for (const row of times.data ?? []) {
+            const id = Number(row.id);
+            if (!Number.isInteger(id)) continue;
+            releaseByPost.set(id, typeof row.publish_at === "string" ? row.publish_at : null);
+          }
+        }
+      }
+    }
+
     if (error) {
       console.error("Error loading digest stories:", error.message);
       return {
@@ -309,6 +361,7 @@ export async function getDigestReview(requestedRaw: string | undefined): Promise
             sourceUrl: row.url,
           })
         ),
+        ...releaseFields(row.status, storyPostId, releaseByPost, releaseTimesLoaded, now),
       };
       const key = isDigestSection(row.section) ? row.section : row.section;
       const list = buckets.get(key) ?? [];

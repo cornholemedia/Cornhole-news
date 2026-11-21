@@ -18,8 +18,8 @@ export async function getPublishedFeedPosts(limit = RSS_FEED_LIMIT): Promise<Rss
   const size = Math.min(RSS_FEED_LIMIT, Math.max(1, Math.floor(limit) || RSS_FEED_LIMIT));
   const { data, error } = await supabase
     .from("posts_with_stats")
-    .select("id, title, body, created_at")
-    .order("created_at", { ascending: false })
+    .select("id, title, body, created_at, released_at")
+    .order("released_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(size);
 
@@ -30,7 +30,10 @@ export async function getPublishedFeedPosts(limit = RSS_FEED_LIMIT): Promise<Rss
 
   const items: RssItem[] = [];
   for (const row of data ?? []) {
-    const item = toFeedItem(row);
+    const item = toFeedItem({
+      ...row,
+      created_at: row.released_at || row.created_at,
+    });
     if (item) items.push(item);
   }
   return items;

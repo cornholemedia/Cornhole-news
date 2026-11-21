@@ -41,6 +41,7 @@ export default async function AdminPagesIndex() {
         </h2>
         <p className="mt-1 text-sm text-[#3a3a3a]">
           Stories sent by the daily digest stay hidden until you publish them.
+          A morning batch is spaced out until 2:00 PM Central instead of going up all at once.
           {digest.pendingCount > 0
             ? ` ${digest.pendingCount} ${digest.pendingCount === 1 ? "story is" : "stories are"} waiting.`
             : ""}

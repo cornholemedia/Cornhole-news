@@ -48,6 +48,9 @@ export const DIGEST_TWEET_HINT =
 export const DIGEST_STATE_HINT =
   "Story states need a database update. In Supabase, open the SQL editor and run supabase/migrations/20261120_story_state.sql.";
 
+export const DIGEST_DRIP_HINT =
+  "Scheduled release needs a database update before this version of the site is deployed. In Supabase, open the SQL editor and run supabase/migrations/20261121_drip_release.sql.";
+
 /** How many Chicago calendar days the review date picker offers, including today. */
 export const DIGEST_REVIEW_DAYS = 7;
 

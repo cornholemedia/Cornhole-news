@@ -68,10 +68,10 @@ test("the feed routes are public, cached, and do not use server secrets", () => 
   assert.match(feedPostsSource, /posts_with_stats/);
   assert.match(feedPostsSource, /createPublicClient/);
   assert.match(publicClientSource, /NEXT_PUBLIC_SUPABASE_ANON_KEY/);
-  assert.match(feedPostsSource, /\.order\("created_at", \{ ascending: false \}\)/);
-  assert.equal(RSS_REVALIDATE_SECONDS, 300);
-  assert.match(rssRoute, /export const revalidate = 300/);
-  assert.match(feedRoute, /export const revalidate = 300/);
+  assert.match(feedPostsSource, /\.order\("released_at", \{ ascending: false \}\)/);
+  assert.equal(RSS_REVALIDATE_SECONDS, 180);
+  assert.match(rssRoute, /export const revalidate = RSS_REVALIDATE_SECONDS/);
+  assert.match(feedRoute, /export const revalidate = RSS_REVALIDATE_SECONDS/);
   assert.match(responseSource, /application\/rss\+xml/);
 });
 

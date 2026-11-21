@@ -41,6 +41,7 @@ voting, comments).
    - `supabase/migrations/20261104_site_announcement.sql`
    - `supabase/migrations/20261119_faq_page.sql`
    - `supabase/migrations/20261120_story_state.sql`
+   - `supabase/migrations/20261121_drip_release.sql`
 4. Go to **Project Settings → API**. You'll need two values from there:
    - **Project URL**
    - **anon public** key
@@ -206,9 +207,9 @@ redeploys automatically.
 
 ## Daily Midwest digest
 
-The job sends one day at a time. Stories stay in a private queue until an admin opens `/admin/review` and clicks **Publish** on each one. Each story has a Politics checkbox, off by default. Delete hides one story. **Finished** hides every story still waiting for the selected date and leaves published stories up. The date list is only the last 7 days in Chicago time, and only days that already have stories. Choosing a date loads it immediately. A later send of that same date and URL does not bring a deleted story back, and it does not change a story that was already published or clear its Politics checkbox. Links left out of a later send stay pending until you delete them. Nothing is posted automatically. Clicking Publish twice does not create two posts.
+The job sends one day at a time. Stories stay in a private queue until an admin opens `/admin/review` and publishes them. **Publish** on one story, or **Schedule selected** for several, spaces that batch from now until 2:00 PM Central the same day. The first story goes on the site immediately. After 2:00 PM Central, publishing puts the batch up immediately. Each story has a Politics checkbox, off by default. Delete hides one story. **Finished** hides every story still waiting for the selected date and leaves published stories up. A scheduled story can be released now or put back on the waiting list before its time. The date list is only the last 7 days in Chicago time, and only days that already have stories. Choosing a date loads it immediately. A later send of that same date and URL does not bring a deleted story back, and it does not change a story that was already published or clear its Politics checkbox. Links left out of a later send stay pending until you delete them. Nothing is posted automatically. Clicking Publish twice does not create two posts. Publishing does not send email or post to X.
 
-Run `supabase/migrations/20261013_digest_stories.sql` in the Supabase SQL editor, then `supabase/migrations/20261014_publish_one_digest_story.sql`, then `supabase/migrations/20261015_digest_story_politics.sql`, then `supabase/migrations/20261016_digest_trade_industry.sql`, then `supabase/migrations/20261020_digest_politics_section.sql`, then `supabase/migrations/20261027_tweet_draft.sql`, then `supabase/migrations/20261120_story_state.sql`. Create the **Cornhole News** author using the steps at the top of the first digest file. Set `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel and redeploy.
+Run `supabase/migrations/20261013_digest_stories.sql` in the Supabase SQL editor, then `supabase/migrations/20261014_publish_one_digest_story.sql`, then `supabase/migrations/20261015_digest_story_politics.sql`, then `supabase/migrations/20261016_digest_trade_industry.sql`, then `supabase/migrations/20261020_digest_politics_section.sql`, then `supabase/migrations/20261027_tweet_draft.sql`, then `supabase/migrations/20261120_story_state.sql`, then `supabase/migrations/20261121_drip_release.sql` before deploying the drip release. Create the **Cornhole News** author using the steps at the top of the first digest file. Set `DIGEST_INGEST_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel and redeploy.
 
 ```bash
 curl -sS -X POST "https://cornholenews.news/api/digest/ingest" \
@@ -323,6 +324,7 @@ accounts that are not admins.
    - `supabase/migrations/20261104_site_announcement.sql`
    - `supabase/migrations/20261119_faq_page.sql`
    - `supabase/migrations/20261120_story_state.sql`
+   - `supabase/migrations/20261121_drip_release.sql`
    The first reserves username `Cornhole_Admin` and adds bans. The second
    limits posts and comments and freezes `created_at`. The third stops
    anonymous writes to the contact, newsletter, and job tables, and to the

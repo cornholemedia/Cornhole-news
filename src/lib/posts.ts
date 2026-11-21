@@ -8,6 +8,8 @@ export type PostWithStats = {
   url: string | null;
   body: string | null;
   created_at: string;
+  /** When the story became public. Falls back to created_at for older rows. */
+  released_at?: string;
   author_id: string;
   author_username: string;
   points: number;
@@ -52,7 +54,8 @@ export async function getTopPosts(limit = PAGE_SIZE, options?: TopPostOptions): 
     query = fresh ? query.gt("created_at", cutoff) : query.lte("created_at", cutoff);
     const { data, error } = await query
       .order("points", { ascending: false })
-      .order("created_at", { ascending: false })
+      .order("released_at", { ascending: false })
+      .order("id", { ascending: false })
       // range() is inclusive, so a full page of 30 ends at start + size - 1.
       .range(start, start + size - 1);
     if (error) {
@@ -84,7 +87,8 @@ export async function getNewPosts(limit = 30): Promise<PostWithStats[]> {
   const { data, error } = await supabase
     .from("posts_with_stats")
     .select("*")
-    .order("created_at", { ascending: false })
+    .order("released_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(limit);
 
   if (error) {
@@ -104,8 +108,9 @@ export async function getSitemapPosts(): Promise<Pick<PostWithStats, "id" | "cre
     if (!supabase) return [];
     const { data, error } = await supabase
       .from("posts_with_stats")
-      .select("id, created_at")
-      .order("created_at", { ascending: false })
+      .select("id, created_at, released_at")
+      .order("released_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(1000);
 
     if (error) {
@@ -113,7 +118,10 @@ export async function getSitemapPosts(): Promise<Pick<PostWithStats, "id" | "cre
       return [];
     }
 
-    return data ?? [];
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      created_at: row.released_at || row.created_at,
+    }));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not load sitemap posts.";
     console.error("Error fetching sitemap posts:", message);
