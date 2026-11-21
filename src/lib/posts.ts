@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { missingReleasedAtColumn } from "@/lib/drip-schedule";
 import { createPublicClient } from "@/lib/supabase/public";
 import { topStoryCutoff } from "@/lib/top-stories";
 
@@ -49,15 +50,25 @@ export async function getTopPosts(limit = PAGE_SIZE, options?: TopPostOptions): 
 
   async function page(fresh: boolean, start: number, size: number): Promise<PostWithStats[] | null> {
     if (size <= 0) return [];
-    let query = db.from("posts_with_stats").select("*");
-    if (hidePolitics) query = query.eq("is_political", false);
-    query = fresh ? query.gt("created_at", cutoff) : query.lte("created_at", cutoff);
-    const { data, error } = await query
-      .order("points", { ascending: false })
-      .order("released_at", { ascending: false })
-      .order("id", { ascending: false })
-      // range() is inclusive, so a full page of 30 ends at start + size - 1.
-      .range(start, start + size - 1);
+    const load = (useReleasedAt: boolean) => {
+      let query = db.from("posts_with_stats").select("*");
+      if (hidePolitics) query = query.eq("is_political", false);
+      query = fresh ? query.gt("created_at", cutoff) : query.lte("created_at", cutoff);
+      return (
+        query
+          .order("points", { ascending: false })
+          .order(useReleasedAt ? "released_at" : "created_at", { ascending: false })
+          .order("id", { ascending: false })
+          // range() is inclusive, so a full page of 30 ends at start + size - 1.
+          .range(start, start + size - 1)
+      );
+    };
+    let { data, error } = await load(true);
+    // The drip column is added by a migration the owner runs separately.
+    // Until then, rank by created_at, which matches released_at for every live post.
+    if (error && missingReleasedAtColumn(error.message)) {
+      ({ data, error } = await load(false));
+    }
     if (error) {
       console.error("Error fetching top posts:", error.message);
       return null;
@@ -84,13 +95,18 @@ export async function getTopPosts(limit = PAGE_SIZE, options?: TopPostOptions): 
 export async function getNewPosts(limit = 30): Promise<PostWithStats[]> {
   const supabase = createPublicClient();
   if (!supabase) return [];
-  const { data, error } = await supabase
-    .from("posts_with_stats")
-    .select("*")
-    .order("released_at", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(limit);
+  const load = (useReleasedAt: boolean) =>
+    supabase
+      .from("posts_with_stats")
+      .select("*")
+      .order(useReleasedAt ? "released_at" : "created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(limit);
 
+  let { data, error } = await load(true);
+  if (error && missingReleasedAtColumn(error.message)) {
+    ({ data, error } = await load(false));
+  }
   if (error) {
     console.error("Error fetching new posts:", error.message);
     return [];
@@ -106,21 +122,40 @@ export async function getSitemapPosts(): Promise<Pick<PostWithStats, "id" | "cre
   try {
     const supabase = createPublicClient();
     if (!supabase) return [];
-    const { data, error } = await supabase
+    const withRelease = await supabase
       .from("posts_with_stats")
       .select("id, created_at, released_at")
       .order("released_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(1000);
 
-    if (error) {
-      console.error("Error fetching sitemap posts:", error.message);
+    if (!withRelease.error) {
+      return (withRelease.data ?? []).map((row) => ({
+        id: row.id,
+        created_at: row.released_at || row.created_at,
+      }));
+    }
+
+    if (!missingReleasedAtColumn(withRelease.error.message)) {
+      console.error("Error fetching sitemap posts:", withRelease.error.message);
       return [];
     }
 
-    return (data ?? []).map((row) => ({
+    const plain = await supabase
+      .from("posts_with_stats")
+      .select("id, created_at")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(1000);
+
+    if (plain.error) {
+      console.error("Error fetching sitemap posts:", plain.error.message);
+      return [];
+    }
+
+    return (plain.data ?? []).map((row) => ({
       id: row.id,
-      created_at: row.released_at || row.created_at,
+      created_at: row.created_at,
     }));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not load sitemap posts.";

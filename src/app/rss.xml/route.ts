@@ -1,7 +1,8 @@
-import { RSS_REVALIDATE_SECONDS } from "@/lib/rss";
 import { rssFeedResponse } from "@/lib/rss-response";
 
-export const revalidate = RSS_REVALIDATE_SECONDS;
+// Three minutes. Keep this number in step with RSS_REVALIDATE_SECONDS.
+// Next.js only accepts a literal here.
+export const revalidate = 180;
 
 export function GET() {
   return rssFeedResponse();

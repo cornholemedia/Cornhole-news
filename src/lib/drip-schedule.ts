@@ -301,6 +301,11 @@ export function formatDripMessage(publishAts: readonly Date[], now: Date): strin
   return `Scheduled ${count} stories. The first goes live at ${firstClock} CT. The last goes live at ${lastClock} CT.`;
 }
 
+/** True when a public read failed because the drip migration has not been applied. */
+export function missingReleasedAtColumn(message: string): boolean {
+  return /released_at/i.test(message) && /column|schema cache|does not exist/i.test(message);
+}
+
 export function missingDripRelease(message: string): boolean {
   return (
     /publish_at|released_at|apply_drip_schedule|release_digest_story_now|unschedule_digest_story|post_is_public/i.test(

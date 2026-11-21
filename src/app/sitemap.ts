@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
 import { getSitemapJobPostings } from "@/lib/job-postings";
 import { getSitemapPosts } from "@/lib/posts";
-import { SITEMAP_REVALIDATE_SECONDS } from "@/lib/public-cache";
 import { advertiseEnabled, getSiteUrl } from "@/lib/site";
 
-export const revalidate = SITEMAP_REVALIDATE_SECONDS;
+// Three minutes. Keep this number in step with SITEMAP_REVALIDATE_SECONDS.
+// Next.js only accepts a literal here.
+export const revalidate = 180;
 
 const STATIC_PATHS = [
   "/",

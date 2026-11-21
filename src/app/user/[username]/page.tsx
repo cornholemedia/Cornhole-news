@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import AdminBanBar from "@/components/AdminBanBar";
 import PostList from "@/components/PostList";
+import { missingReleasedAtColumn } from "@/lib/drip-schedule";
 import { pageMeta } from "@/lib/seo";
 import { createPublicClient } from "@/lib/supabase/public";
 
@@ -62,12 +63,19 @@ export default async function UserPage({
     return <p className="text-[15px] text-[#666]">User not found.</p>;
   }
 
-  const { data: posts } = await supabase
-    .from("posts_with_stats")
-    .select("*")
-    .eq("author_id", profile.id)
-    .order("released_at", { ascending: false })
-    .order("id", { ascending: false });
+  const loadPosts = (useReleasedAt: boolean) =>
+    supabase
+      .from("posts_with_stats")
+      .select("*")
+      .eq("author_id", profile.id)
+      .order(useReleasedAt ? "released_at" : "created_at", { ascending: false })
+      .order("id", { ascending: false });
+
+  let postsResult = await loadPosts(true);
+  if (postsResult.error && missingReleasedAtColumn(postsResult.error.message)) {
+    postsResult = await loadPosts(false);
+  }
+  const posts = postsResult.data;
 
   return (
     <div>

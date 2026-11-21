@@ -10,6 +10,7 @@ import {
   formatDripMessage,
   formatReleaseLabel,
   missingDripRelease,
+  missingReleasedAtColumn,
   planDripRelease,
   type DripExisting,
 } from "./drip-schedule.ts";
@@ -167,6 +168,8 @@ test("release labels use Central time", () => {
   });
   assert.equal(missingDripRelease("Could not find the function public.apply_drip_schedule in the schema cache"), true);
   assert.equal(missingDripRelease("not allowed"), false);
+  assert.equal(missingReleasedAtColumn("column posts_with_stats.released_at does not exist"), true);
+  assert.equal(missingReleasedAtColumn("not allowed"), false);
 });
 
 test("the migration hides unreleased posts and does not backdate live ones", () => {

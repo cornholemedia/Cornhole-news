@@ -85,7 +85,8 @@ test("public pages are cached and the proxy stays on admin", () => {
     assert.equal(source(file).includes("searchParams"), false);
   }
 
-  assert.match(source("../app/sitemap.ts"), /SITEMAP_REVALIDATE_SECONDS/);
+  assert.equal(SITEMAP_REVALIDATE_SECONDS, 180);
+  assert.match(source("../app/sitemap.ts"), /export const revalidate = 180/);
   assert.equal(source("../app/sitemap.ts").includes("force-dynamic"), false);
   assert.equal(source("./announcement-public.ts").includes("connection("), false);
   assert.equal(source("./ads-public.ts").includes("connection("), false);
