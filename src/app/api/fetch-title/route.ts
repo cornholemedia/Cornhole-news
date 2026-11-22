@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchPublicHtml } from "@/lib/safe-fetch";
+import { fetchPublicHtml, readResponseText } from "@/lib/safe-fetch";
 
 export const runtime = "nodejs";
 
@@ -45,7 +45,14 @@ function extractTitle(html: string): string | null {
   return null;
 }
 
+function tookTooLong(error: unknown): boolean {
+  return error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError");
+}
+
 export async function POST(request: NextRequest) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
   try {
     const body = (await request.json()) as { url?: string };
     const rawUrl = body.url?.trim();
@@ -53,17 +60,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "URL is required." }, { status: 400 });
     }
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
-    let response: Response;
-    try {
-      response = await fetchPublicHtml(rawUrl, controller.signal);
-    } finally {
-      clearTimeout(timer);
-    }
+    const response = await fetchPublicHtml(rawUrl, controller.signal);
 
     if (!response.ok) {
+      void response.body?.cancel().catch(() => undefined);
       return NextResponse.json(
         { error: `Could not fetch that page (${response.status}).` },
         { status: 422 }
@@ -76,35 +76,21 @@ export async function POST(request: NextRequest) {
       !contentType.includes("text/html") &&
       !contentType.includes("application/xhtml")
     ) {
+      void response.body?.cancel().catch(() => undefined);
       return NextResponse.json(
         { error: "That URL does not look like an HTML page." },
         { status: 422 }
       );
     }
 
-    const reader = response.body?.getReader();
-    if (!reader) {
+    const html = await readResponseText(response, controller.signal, MAX_BYTES);
+    if (!html) {
       return NextResponse.json(
         { error: "Empty response from that URL." },
         { status: 422 }
       );
     }
 
-    const chunks: Uint8Array[] = [];
-    let received = 0;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!value) continue;
-      received += value.byteLength;
-      if (received > MAX_BYTES) {
-        await reader.cancel();
-        break;
-      }
-      chunks.push(value);
-    }
-
-    const html = Buffer.concat(chunks).toString("utf8");
     const title = extractTitle(html);
     if (!title) {
       return NextResponse.json(
@@ -117,12 +103,13 @@ export async function POST(request: NextRequest) {
       title: title.slice(0, 300),
     });
   } catch (err) {
-    const message =
-      err instanceof Error
-        ? err.name === "AbortError"
-          ? "Timed out fetching that URL."
-          : err.message
+    const message = tookTooLong(err)
+      ? "Timed out fetching that URL."
+      : err instanceof Error
+        ? err.message
         : "Could not generate a title.";
     return NextResponse.json({ error: message }, { status: 400 });
+  } finally {
+    clearTimeout(timer);
   }
 }

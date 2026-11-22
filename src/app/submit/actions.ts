@@ -9,9 +9,29 @@ import { revalidatePublicStories, revalidateUserProfile } from "@/lib/revalidate
 import { createClient } from "@/lib/supabase/server";
 import { TURNSTILE_FIELD, verifyTurnstileToken } from "@/lib/turnstile";
 
-export async function submitPost(
-  formData: FormData
-): Promise<{ ok: true; id: number } | { ok: false; error: string }> {
+const WRITE_TIMEOUT_MS = 8_000;
+const SUBMIT_FAILED = "We could not submit that story. Please try again.";
+const SUBMIT_TIMED_OUT = "The submission took too long. Please try again.";
+
+type SubmitResult = { ok: true; id: number } | { ok: false; error: string };
+
+function timedOut(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const name = "name" in error && typeof error.name === "string" ? error.name : "";
+  const message = "message" in error && typeof error.message === "string" ? error.message : "";
+  return name === "AbortError" || name === "TimeoutError" || /aborted|timeout/i.test(message);
+}
+
+export async function submitPost(formData: FormData): Promise<SubmitResult> {
+  try {
+    return await saveSubmittedPost(formData);
+  } catch (error) {
+    console.error("Could not submit a story:", error instanceof Error ? error.message : "unknown error");
+    return { ok: false, error: timedOut(error) ? SUBMIT_TIMED_OUT : SUBMIT_FAILED };
+  }
+}
+
+async function saveSubmittedPost(formData: FormData): Promise<SubmitResult> {
   const title = cleanPostTitle(fieldValue(formData.get("title")));
   if (!title) return { ok: false, error: "Title is required and must be 300 characters or fewer." };
 
@@ -55,15 +75,22 @@ export async function submitPost(
     .from("posts")
     .insert({ ...row, state: state.value })
     .select("id")
+    .abortSignal(AbortSignal.timeout(WRITE_TIMEOUT_MS))
     .single();
 
   if (error && state.value === null && missingPostStateColumn(error.message)) {
-    const retry = await supabase.from("posts").insert(row).select("id").single();
+    const retry = await supabase
+      .from("posts")
+      .insert(row)
+      .select("id")
+      .abortSignal(AbortSignal.timeout(WRITE_TIMEOUT_MS))
+      .single();
     data = retry.data;
     error = retry.error;
   }
 
   if (error || !data) {
+    if (error && timedOut(error)) return { ok: false, error: SUBMIT_TIMED_OUT };
     if (error && missingPostStateColumn(error.message)) {
       return { ok: false, error: STORY_STATE_MIGRATION_HINT };
     }
@@ -75,6 +102,7 @@ export async function submitPost(
     .from("profiles")
     .select("username")
     .eq("id", user.id)
+    .abortSignal(AbortSignal.timeout(WRITE_TIMEOUT_MS))
     .maybeSingle();
   if (typeof profile?.username === "string") revalidateUserProfile(profile.username);
 

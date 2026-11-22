@@ -8,8 +8,34 @@ import StateField from "@/components/StateField";
 import TurnstileField from "@/components/TurnstileField";
 import { submitPost } from "@/app/submit/actions";
 
+const SUBMIT_TIMEOUT_MS = 20_000;
+const TITLE_TIMEOUT_MS = 12_000;
+const AUTH_TIMEOUT_MS = 12_000;
+
+function tookTooLong(error: unknown): boolean {
+  return error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError");
+}
+
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new DOMException("The operation timed out.", "TimeoutError"));
+    }, ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
 export default function SubmitPage() {
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [title, setTitle] = useState("");
@@ -23,13 +49,32 @@ export default function SubmitPage() {
   const [turnstileKey, setTurnstileKey] = useState(0);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        router.push("/login");
-      } else {
+    let active = true;
+    const timer = setTimeout(() => {
+      if (!active) return;
+      setCheckingAuth(false);
+      setError("We could not confirm your login. Refresh the page and try again.");
+    }, AUTH_TIMEOUT_MS);
+
+    supabase.auth
+      .getUser()
+      .then(({ data: { user } }) => {
+        if (!active) return;
+        clearTimeout(timer);
+        if (!user) router.push("/login");
+        else setCheckingAuth(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        clearTimeout(timer);
         setCheckingAuth(false);
-      }
-    });
+        setError("We could not confirm your login. Refresh the page and try again.");
+      });
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [router, supabase]);
 
   async function handleGenerateTitle() {
@@ -46,6 +91,7 @@ export default function SubmitPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: trimmed }),
+        signal: AbortSignal.timeout(TITLE_TIMEOUT_MS),
       });
       const data = (await res.json()) as { title?: string; error?: string };
       if (!res.ok || !data.title) {
@@ -53,8 +99,12 @@ export default function SubmitPage() {
         return;
       }
       setTitle(data.title);
-    } catch {
-      setError("Could not generate a title from that URL.");
+    } catch (error) {
+      setError(
+        tookTooLong(error)
+          ? "Timed out fetching that URL. Please try again."
+          : "Could not generate a title from that URL."
+      );
     } finally {
       setGeneratingTitle(false);
     }
@@ -69,27 +119,40 @@ export default function SubmitPage() {
       return;
     }
 
+    // currentTarget is cleared once this handler awaits, so read the form first.
+    const formData = new FormData(e.currentTarget);
+
     setLoading(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await withTimeout(supabase.auth.getUser(), AUTH_TIMEOUT_MS);
 
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+      if (!user) {
+        router.push("/login");
+        return;
+      }
 
-    const result = await submitPost(new FormData(e.currentTarget));
-    setLoading(false);
+      const result = await withTimeout(submitPost(formData), SUBMIT_TIMEOUT_MS);
 
-    if (!result.ok) {
-      setError(result.error);
+      if (!result.ok) {
+        setError(result.error);
+        setTurnstileKey((key) => key + 1);
+        return;
+      }
+
+      router.push(`/item/${result.id}`);
+      router.refresh();
+    } catch (error) {
+      setError(
+        tookTooLong(error)
+          ? "The submission took too long. Please try again."
+          : "We could not submit that story. Please try again."
+      );
       setTurnstileKey((key) => key + 1);
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    router.push(`/item/${result.id}`);
-    router.refresh();
   }
 
   if (checkingAuth) return null;
