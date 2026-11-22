@@ -89,7 +89,50 @@ function isBlockedHostname(hostname: string): boolean {
   return false;
 }
 
-export async function assertPublicHttpUrl(raw: string): Promise<URL> {
+function abortedError(signal: AbortSignal): Error {
+  if (signal.reason instanceof Error) return signal.reason;
+  return new DOMException("The operation was aborted.", "AbortError");
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw abortedError(signal);
+}
+
+/**
+ * DNS lookups do not accept an AbortSignal. Race them so a stalled resolver
+ * cannot hold a request open after the caller has given up.
+ */
+async function lookupAll(hostname: string, signal?: AbortSignal): Promise<{ address: string }[]> {
+  throwIfAborted(signal);
+  const pending = lookup(hostname, { all: true });
+  pending.catch(() => undefined);
+
+  if (!signal) return pending;
+
+  return await new Promise((resolve, reject) => {
+    const onAbort = () => reject(abortedError(signal));
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+    pending.then(
+      (records) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(records);
+      },
+      (error: unknown) => {
+        signal.removeEventListener("abort", onAbort);
+        if (signal.aborted) reject(abortedError(signal));
+        else reject(error);
+      }
+    );
+  });
+}
+
+export async function assertPublicHttpUrl(raw: string, signal?: AbortSignal): Promise<URL> {
+  throwIfAborted(signal);
+
   let parsed: URL;
   try {
     parsed = new URL(raw);
@@ -120,10 +163,14 @@ export async function assertPublicHttpUrl(raw: string): Promise<URL> {
 
   let records: { address: string }[];
   try {
-    records = await lookup(hostname, { all: true });
-  } catch {
+    records = await lookupAll(hostname, signal);
+  } catch (error) {
+    if (signal?.aborted) throw abortedError(signal);
+    if (error instanceof Error && error.message === "Could not resolve that host.") throw error;
     throw new Error("Could not resolve that host.");
   }
+
+  throwIfAborted(signal);
 
   if (!records.length) {
     throw new Error("Could not resolve that host.");
@@ -143,9 +190,11 @@ export async function assertPublicHttpUrl(raw: string): Promise<URL> {
  * Each Location is resolved and checked before the next request.
  */
 export async function fetchPublicHtml(rawUrl: string, signal: AbortSignal): Promise<Response> {
-  let current = await assertPublicHttpUrl(rawUrl);
+  throwIfAborted(signal);
+  let current = await assertPublicHttpUrl(rawUrl, signal);
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+    throwIfAborted(signal);
     const response = await fetch(current.toString(), {
       method: "GET",
       redirect: "manual",
@@ -161,7 +210,7 @@ export async function fetchPublicHtml(rawUrl: string, signal: AbortSignal): Prom
     }
 
     const location = response.headers.get("location");
-    await response.body?.cancel().catch(() => undefined);
+    void response.body?.cancel().catch(() => undefined);
 
     if (hop === MAX_REDIRECTS) {
       throw new Error("Too many redirects.");
@@ -177,8 +226,68 @@ export async function fetchPublicHtml(rawUrl: string, signal: AbortSignal): Prom
       throw new Error("That page redirected to an invalid URL.");
     }
 
-    current = await assertPublicHttpUrl(next.toString());
+    current = await assertPublicHttpUrl(next.toString(), signal);
   }
 
   throw new Error("Too many redirects.");
+}
+
+/**
+ * Read a response body until it ends, the byte cap is hit, or `signal` aborts.
+ * Callers must keep `signal` armed for this read. Stopping it when the headers
+ * arrive lets a page that never closes its body hold the request open.
+ */
+export async function readResponseText(
+  response: Response,
+  signal: AbortSignal,
+  maxBytes: number
+): Promise<string> {
+  throwIfAborted(signal);
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+
+  const onAbort = () => {
+    void reader.cancel().catch(() => undefined);
+  };
+  signal.addEventListener("abort", onAbort, { once: true });
+
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  try {
+    while (true) {
+      const { done, value } = await new Promise<ReadableStreamReadResult<Uint8Array>>(
+        (resolve, reject) => {
+          if (signal.aborted) {
+            reject(abortedError(signal));
+            return;
+          }
+          const onAbortRead = () => reject(abortedError(signal));
+          signal.addEventListener("abort", onAbortRead, { once: true });
+          reader.read().then(
+            (result) => {
+              signal.removeEventListener("abort", onAbortRead);
+              resolve(result);
+            },
+            (error: unknown) => {
+              signal.removeEventListener("abort", onAbortRead);
+              reject(signal.aborted ? abortedError(signal) : error);
+            }
+          );
+        }
+      );
+      if (signal.aborted) throw abortedError(signal);
+      if (done) break;
+      if (!value) continue;
+      received += value.byteLength;
+      if (received > maxBytes) {
+        void reader.cancel().catch(() => undefined);
+        break;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    signal.removeEventListener("abort", onAbort);
+  }
+
+  return Buffer.concat(chunks).toString("utf8");
 }

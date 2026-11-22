@@ -30,13 +30,23 @@ export async function recordIpAttempt(
     return { ok: false, error: FORM_SAVE_ERROR };
   }
 
-  const { data, error } = await supabase.rpc("record_form_attempt", {
-    p_form: form,
-    p_ip_hash: ipHash,
-  });
+  let data: boolean | null = null;
+  let errorMessage = "";
+  try {
+    const result = await supabase
+      .rpc("record_form_attempt", {
+        p_form: form,
+        p_ip_hash: ipHash,
+      })
+      .abortSignal(AbortSignal.timeout(8_000));
+    data = result.data;
+    errorMessage = result.error?.message ?? "";
+  } catch (error) {
+    errorMessage = error instanceof Error ? error.message : "Could not record a form attempt.";
+  }
 
-  if (error) {
-    console.error("Could not record a form attempt:", error.message);
+  if (errorMessage) {
+    console.error("Could not record a form attempt:", errorMessage);
     return { ok: false, error: FORM_SAVE_ERROR };
   }
 
