@@ -8,8 +8,11 @@ const FALLBACK_ORIGIN = "https://cornholenews.news";
 /** Newest stories included in one feed document. */
 export const RSS_FEED_LIMIT = 50;
 
-/** How long a cached feed stays fresh, in seconds. */
-export const RSS_REVALIDATE_SECONDS = 300;
+/**
+ * How long a cached feed stays fresh, in seconds.
+ * Short enough that a drip story shows up within a few minutes of its slot.
+ */
+export const RSS_REVALIDATE_SECONDS = 180;
 
 /** Cap a story blurb. Existing posts are shorter than this. */
 const DESCRIPTION_MAX = 400;

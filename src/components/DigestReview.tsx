@@ -6,9 +6,11 @@ import { useRef, useState } from "react";
 import {
   deleteDigestStory,
   deletePendingDigestStories,
-  publishDigestStory,
+  publishDigestStories,
+  releaseDigestStoryNow,
   setDigestStoryPolitics,
   setDigestStoryState,
+  unscheduleDigestStory,
   type DigestActionResult,
 } from "@/app/admin/review/actions";
 import TweetDraftField from "@/components/TweetDraftField";
@@ -25,6 +27,9 @@ type ReviewStory = {
   isPolitical: boolean;
   tweetText: string;
   storyState: string | null;
+  publishAt: string | null;
+  releaseLabel: string;
+  scheduled: boolean;
 };
 
 type ReviewGroup = {
@@ -40,7 +45,7 @@ type DateChoice = {
 
 type PendingAction = {
   id: string;
-  action: "publish" | "delete" | "finish" | "politics" | "state";
+  action: "publish" | "schedule" | "delete" | "finish" | "politics" | "state" | "release" | "unschedule";
 };
 
 export default function DigestReview({
@@ -76,6 +81,8 @@ export default function DigestReview({
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [publishedNow, setPublishedNow] = useState<Record<string, true>>({});
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [selectedSource, setSelectedSource] = useState(groups);
 
   if (flagSource !== groups) {
     setFlagSource(groups);
@@ -115,11 +122,31 @@ export default function DigestReview({
     });
   }
 
+  if (selectedSource !== groups) {
+    setSelectedSource(groups);
+    setSelected((current) => {
+      const pendingIds = new Set(
+        groups.flatMap((group) =>
+          group.stories.filter((story) => story.status === "pending").map((story) => story.id)
+        )
+      );
+      const next: Record<string, boolean> = {};
+      for (const [id, on] of Object.entries(current)) {
+        if (on && pendingIds.has(id)) next[id] = true;
+      }
+      const same =
+        Object.keys(next).length === Object.keys(current).length &&
+        Object.keys(current).every((id) => next[id]);
+      return same ? current : next;
+    });
+  }
+
   async function run(
     id: string,
     actionName: PendingAction["action"],
     action: () => Promise<DigestActionResult>,
-    confirmMessage?: string
+    confirmMessage?: string,
+    publishedIds?: string[]
   ) {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -140,9 +167,26 @@ export default function DigestReview({
       }
       setMessage(result.message);
       setPostId(result.postId ?? null);
-      if (actionName === "publish") {
-        setPublishedNow((current) => ({ ...current, [id]: true }));
-        setExpanded((current) => ({ ...current, [id]: false }));
+      if (publishedIds && publishedIds.length > 0) {
+        setPublishedNow((current) => {
+          const next = { ...current };
+          for (const storyId of publishedIds) next[storyId] = true;
+          return next;
+        });
+        setExpanded((current) => {
+          const next = { ...current };
+          for (const storyId of publishedIds) next[storyId] = false;
+          return next;
+        });
+        setSelected({});
+      }
+      if (actionName === "unschedule") {
+        setPublishedNow((current) => {
+          if (!current[id]) return current;
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
       }
       router.refresh();
     } catch {
@@ -229,6 +273,60 @@ export default function DigestReview({
   const busy = pending !== null;
   const waiting = pendingCount + moreWaiting;
   const finishing = pending?.action === "finish";
+  const scheduling = pending?.action === "schedule";
+  const pendingStories = groups.flatMap((group) =>
+    group.stories.filter((story) => story.status === "pending" && !publishedNow[story.id])
+  );
+  const selectedIds = pendingStories.filter((story) => selected[story.id]).map((story) => story.id);
+  const releaseRows = groups
+    .flatMap((group) => group.stories)
+    .filter((story) => (publishedNow[story.id] ? true : story.status === "published"))
+    .slice()
+    .sort((a, b) => {
+      if (a.scheduled !== b.scheduled) return a.scheduled ? 1 : -1;
+      if (!a.publishAt && !b.publishAt) return a.headline.localeCompare(b.headline);
+      if (!a.publishAt) return -1;
+      if (!b.publishAt) return 1;
+      return a.publishAt.localeCompare(b.publishAt);
+    });
+
+  function releaseControls(story: ReviewStory) {
+    const releasing = pending?.id === story.id && pending.action === "release";
+    const unscheduling = pending?.id === story.id && pending.action === "unschedule";
+    const label = story.releaseLabel || (publishedNow[story.id] ? "Scheduled" : "Published");
+    return (
+      <div className="flex flex-col gap-2 sm:items-end">
+        <span className="text-sm font-medium text-[#1a1a1a]">{label}</span>
+        {story.scheduled ? (
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => run(story.id, "release", () => releaseDigestStoryNow(story.id))}
+              className="field-button review-publish min-h-11 rounded px-4 text-base font-medium"
+            >
+              {releasing ? "Releasing..." : "Release now"}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                run(
+                  story.id,
+                  "unschedule",
+                  () => unscheduleDigestStory(story.id),
+                  "Take this story off the schedule? It goes back to waiting and stays off the site."
+                )
+              }
+              className="field-button min-h-11 rounded border border-[#c8c8c8] bg-white px-4 text-base font-medium text-[#1a1a1a] disabled:opacity-60"
+            >
+              {unscheduling ? "Unscheduling..." : "Unschedule"}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <section aria-labelledby="digest-review-heading">
@@ -279,7 +377,7 @@ export default function DigestReview({
         <p className="mt-2 text-base leading-relaxed text-[#1a1a1a]">
           {waiting === 0
             ? "Nothing is waiting for this date. Published stories stay listed here."
-            : `${waiting} ${waiting === 1 ? "story is" : "stories are"} still hidden. Publish posts that one story as Cornhole News. Politics is off until you turn it on.`}
+            : `${waiting} ${waiting === 1 ? "story is" : "stories are"} still hidden. Publish spaces the stories you choose from now until 2:00 PM Central. Politics is off until you turn it on.`}
           {moreWaiting > 0 ? (
             <span className="mt-1 block">
               {moreWaiting} of those {moreWaiting === 1 ? "is" : "are"} beyond this list. Finished still includes them.
@@ -304,6 +402,66 @@ export default function DigestReview({
           <p role="alert" className="mt-4 text-base text-red-700">
             {error}
           </p>
+        ) : null}
+
+        {pendingStories.length > 0 ? (
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                const allSelected = selectedIds.length === pendingStories.length;
+                setSelected(
+                  allSelected
+                    ? {}
+                    : Object.fromEntries(pendingStories.map((story) => [story.id, true]))
+                );
+              }}
+              className="field-button min-h-11 rounded border border-[#c8c8c8] bg-white px-4 text-base font-medium text-[#1a1a1a] disabled:opacity-60"
+            >
+              {selectedIds.length === pendingStories.length ? "Clear selection" : "Select all waiting"}
+            </button>
+            <button
+              type="button"
+              disabled={busy || selectedIds.length === 0 || !botReady}
+              onClick={() => {
+                const ids = selectedIds.slice();
+                void run(
+                  "schedule",
+                  "schedule",
+                  () => publishDigestStories(ids),
+                  undefined,
+                  ids
+                );
+              }}
+              className="field-button review-publish min-h-11 rounded px-4 text-base font-medium disabled:opacity-60"
+            >
+              {scheduling
+                ? "Scheduling..."
+                : selectedIds.length === 0
+                  ? "Schedule selected"
+                  : selectedIds.length === 1
+                    ? "Schedule 1 story"
+                    : `Schedule ${selectedIds.length} stories`}
+            </button>
+          </div>
+        ) : null}
+
+        {releaseRows.length > 0 ? (
+          <div className="mt-4">
+            <h3 className="text-base font-semibold text-[#1a1a1a]">Release times, Central</h3>
+            <ul className="mt-2 space-y-1 text-base leading-relaxed text-[#1a1a1a]">
+              {releaseRows.map((story) => (
+                <li key={story.id}>
+                  <span className="font-medium">
+                    {story.releaseLabel || (publishedNow[story.id] ? "Scheduled" : "Published")}
+                  </span>
+                  {" — "}
+                  {story.headline}
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
       </div>
 
@@ -336,8 +494,8 @@ export default function DigestReview({
                             {story.headline}
                           </a>
                         </h3>
-                        <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
-                          <span className="text-sm font-medium text-[#3a3a3a]">Published</span>
+                        <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+                          {releaseControls(story)}
                           <button
                             type="button"
                             aria-expanded={false}
@@ -419,11 +577,36 @@ export default function DigestReview({
                       </label>
                       {status === "pending" ? (
                         <>
+                          <label
+                            htmlFor={`schedule-${story.id}`}
+                            className="flex min-h-11 items-center gap-2 text-base text-[#1a1a1a]"
+                          >
+                            <input
+                              id={`schedule-${story.id}`}
+                              type="checkbox"
+                              checked={selected[story.id] === true}
+                              disabled={busy}
+                              onChange={(event) =>
+                                setSelected((current) => ({
+                                  ...current,
+                                  [story.id]: event.target.checked,
+                                }))
+                              }
+                              className="h-5 w-5 accent-[#3f679b]"
+                            />
+                            Include
+                          </label>
                           <button
                             type="button"
                             disabled={busy || !botReady}
                             onClick={() =>
-                              run(story.id, "publish", () => publishDigestStory(story.id))
+                              run(
+                                story.id,
+                                "publish",
+                                () => publishDigestStories([story.id]),
+                                undefined,
+                                [story.id]
+                              )
                             }
                             className="field-button review-publish min-h-11 w-full rounded px-4 text-base font-medium sm:w-auto"
                           >
@@ -446,20 +629,17 @@ export default function DigestReview({
                           </button>
                         </>
                       ) : (
-                        <p className="text-base text-[#1a1a1a]">
-                          Published.
-                          {story.postId ? (
-                            <>
-                              {" "}
-                              <Link
-                                href={`/item/${story.postId}`}
-                                className="text-[#3f679b] hover:underline"
-                              >
-                                View post
-                              </Link>
-                            </>
+                        <div className="flex flex-col gap-2 text-base text-[#1a1a1a]">
+                          {releaseControls(story)}
+                          {!story.scheduled && story.postId ? (
+                            <Link
+                              href={`/item/${story.postId}`}
+                              className="text-[#3f679b] hover:underline"
+                            >
+                              View post
+                            </Link>
                           ) : null}
-                        </p>
+                        </div>
                       )}
                     </div>
                   </li>

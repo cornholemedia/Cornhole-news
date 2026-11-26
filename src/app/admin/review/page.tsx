@@ -28,7 +28,10 @@ export default async function AdminDigestReviewPage({
       <h1 className="mb-3 text-2xl font-bold leading-tight">Review digest</h1>
       <p className="mb-4 text-base leading-7 text-[#1a1a1a]">
         Stories from the daily Midwest digest wait here. Nothing is posted until you
-        publish it. Each story has a tweet you can edit, copy, or open on X. Choose a
+        publish it. Publish, or Schedule selected, spaces that batch from now until
+        2:00 PM Central today. The first story goes on the site immediately. After
+        2:00 PM Central, stories go up immediately. Publishing does not send email
+        or post to X. Each story has a tweet you can edit, copy, or open on X. Choose a
         state when the story is about one Midwest state. Politics tags that one post,
         and stays off unless you turn it on.
         Delete removes one story. Finished removes every story still waiting for the
@@ -78,6 +81,12 @@ export default async function AdminDigestReviewPage({
       {!review.loadError && review.selectedDate && !review.statesReady ? (
         <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-base leading-relaxed text-[#1a1a1a]">
           {DIGEST_STATE_HINT}
+        </p>
+      ) : null}
+
+      {!review.loadError && review.scheduleHint ? (
+        <p role="status" className="mb-6 rounded border border-[#e0e0e0] bg-white p-4 text-base leading-relaxed text-[#1a1a1a]">
+          {review.scheduleHint}
         </p>
       ) : null}
 

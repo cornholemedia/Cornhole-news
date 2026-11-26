@@ -3,7 +3,9 @@ import { getSitemapJobPostings } from "@/lib/job-postings";
 import { getSitemapPosts } from "@/lib/posts";
 import { advertiseEnabled, getSiteUrl } from "@/lib/site";
 
-export const revalidate = 3600;
+// Three minutes. Keep this number in step with SITEMAP_REVALIDATE_SECONDS.
+// Next.js only accepts a literal here.
+export const revalidate = 180;
 
 const STATIC_PATHS = [
   "/",

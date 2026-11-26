@@ -43,7 +43,7 @@ test("published review cards stay collapsed until expanded", () => {
   assert.match(review, /reviewStoryCollapsed/);
   assert.match(review, /Published/);
   assert.match(review, /Expand/);
-  assert.match(review, /actionName === "publish"/);
+  assert.match(review, /publishedIds/);
 });
 
 test("Merch is omitted unless the flag is exactly true and the URL is http(s)", () => {

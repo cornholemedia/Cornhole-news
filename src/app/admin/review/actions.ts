@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  DIGEST_BOT_USERNAME,
+  DIGEST_DRIP_HINT,
   DIGEST_MIGRATION_HINT,
   DIGEST_POLITICS_HINT,
   DIGEST_PUBLISH_ONE_HINT,
@@ -10,10 +12,18 @@ import {
   missingDigestSchema,
   parseDigestDate,
 } from "@/lib/digest";
+import {
+  chicagoDayBounds,
+  compareReviewOrder,
+  formatDripMessage,
+  missingDripRelease,
+  planDripRelease,
+  type DripExisting,
+} from "@/lib/drip-schedule";
 import { cleanStoryState } from "@/lib/story-state";
 import { cleanTweetDraft } from "@/lib/tweet";
 import { adminClient } from "@/lib/admin-session";
-import { revalidatePublicStories } from "@/lib/revalidate-public";
+import { revalidatePublicStories, revalidateUserProfile } from "@/lib/revalidate-public";
 
 export type DigestActionResult =
   | { ok: true; message: string; postId?: number }
@@ -50,6 +60,8 @@ function actionError(error: { message: string; code?: string }): string {
   ) {
     return DIGEST_STATE_HINT;
   }
+  if (/schedule-changed/i.test(error.message)) return "The schedule changed. Publish again.";
+  if (missingDripRelease(error.message)) return DIGEST_DRIP_HINT;
   if (/publish_digest_story/i.test(error.message)) return DIGEST_PUBLISH_ONE_HINT;
   if (missingDigestSchema(error.message)) return DIGEST_MIGRATION_HINT;
   return "That could not be saved.";
@@ -60,6 +72,163 @@ function revalidateDigest(published: boolean, postId?: number) {
   revalidatePath("/admin/review");
   if (!published) return;
   revalidatePublicStories(postId);
+  revalidateUserProfile(DIGEST_BOT_USERNAME);
+}
+
+const MAX_SCHEDULE = 100;
+
+type ScheduledRow = {
+  story_id: string;
+  post_id: number;
+  publish_at: string;
+};
+
+function asScheduled(data: unknown): ScheduledRow[] {
+  let value = data;
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value) as unknown;
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(value)) return [];
+  const rows: ScheduledRow[] = [];
+  for (const row of value) {
+    if (!row || typeof row !== "object") continue;
+    const record = row as Record<string, unknown>;
+    const storyId = typeof record.story_id === "string" ? record.story_id : "";
+    const postId = Number(record.post_id);
+    const publishAt = typeof record.publish_at === "string" ? record.publish_at : "";
+    if (!STORY_ID.test(storyId) || !Number.isInteger(postId) || postId <= 0 || !publishAt) continue;
+    rows.push({ story_id: storyId, post_id: postId, publish_at: publishAt });
+  }
+  return rows;
+}
+
+function revalidateScheduled(rows: readonly ScheduledRow[]) {
+  revalidatePath("/admin");
+  revalidatePath("/admin/review");
+  revalidatePublicStories();
+  revalidateUserProfile(DIGEST_BOT_USERNAME);
+  const due = Date.now() + 2000;
+  for (const row of rows) {
+    if (Date.parse(row.publish_at) <= due) revalidatePath(`/item/${row.post_id}`);
+  }
+}
+
+async function scheduleDigestStories(ids: string[]): Promise<DigestActionResult> {
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const id of ids) {
+    if (!STORY_ID.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    unique.push(id);
+  }
+  if (unique.length === 0) return { ok: false, error: "That story could not be found." };
+  if (unique.length > MAX_SCHEDULE) return { ok: false, error: "Schedule up to 100 stories at a time." };
+
+  const { supabase, error } = await adminClient();
+  if (error || !supabase) {
+    return { ok: false, error: error ?? "You need an admin account to do that." };
+  }
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const { data: storyRows, error: storyError } = await supabase
+      .from("digest_stories")
+      .select("id, status, section, created_at")
+      .in("id", unique);
+
+    if (storyError) {
+      console.error("Could not load digest stories to schedule:", storyError.message);
+      return { ok: false, error: actionError(storyError) };
+    }
+
+    const byId = new Map((storyRows ?? []).map((row) => [row.id, row]));
+    for (const id of unique) {
+      const row = byId.get(id);
+      if (!row || (row.status !== "pending" && row.status !== "published")) {
+        return { ok: false, error: "That story is no longer waiting." };
+      }
+    }
+
+    const incoming = unique
+      .map((id) => byId.get(id))
+      .filter((row): row is NonNullable<typeof row> => row?.status === "pending")
+      .map((row) => ({
+        id: row.id,
+        section: row.section,
+        createdAt: row.created_at,
+      }))
+      .sort(compareReviewOrder);
+    if (incoming.length === 0) return { ok: true, message: "Already published." };
+
+    const now = new Date();
+    const bounds = chicagoDayBounds(now);
+    const { data: timed, error: timeError } = await supabase
+      .from("posts")
+      .select("id, publish_at")
+      .not("publish_at", "is", null)
+      .gte("publish_at", bounds.start.toISOString())
+      .lt("publish_at", bounds.end.toISOString());
+
+    if (timeError) {
+      console.error("Could not load today's release times:", timeError.message);
+      return { ok: false, error: actionError(timeError) };
+    }
+
+    const existing: DripExisting[] = [];
+    const expected: { post_id: number; publish_at: string }[] = [];
+    for (const row of timed ?? []) {
+      const postId = Number(row.id);
+      const publishAt = typeof row.publish_at === "string" ? row.publish_at : "";
+      const parsed = new Date(publishAt);
+      if (!Number.isInteger(postId) || postId <= 0 || Number.isNaN(parsed.getTime())) continue;
+      existing.push({ postId, publishAt: parsed });
+      expected.push({ post_id: postId, publish_at: publishAt });
+    }
+
+    const plan = planDripRelease({
+      now,
+      existing,
+      incoming: incoming.map((row) => row.id),
+    });
+    const publish = plan
+      .filter((row): row is typeof row & { storyKey: string } => row.storyKey != null)
+      .map((row) => ({ story_id: row.storyKey, publish_at: row.publishAt.toISOString() }));
+    const move = plan
+      .filter((row): row is typeof row & { postId: number } => row.postId != null)
+      .map((row) => ({ post_id: row.postId, publish_at: row.publishAt.toISOString() }));
+
+    const { data, error: applyError } = await supabase.rpc("apply_drip_schedule", {
+      p_plan: { expected, publish, move },
+    });
+
+    if (applyError) {
+      if (attempt === 0 && /schedule-changed/i.test(applyError.message)) continue;
+      console.error("Could not schedule digest stories:", applyError.message);
+      return { ok: false, error: actionError(applyError) };
+    }
+
+    const scheduled = asScheduled(data);
+    if (scheduled.length === 0) return { ok: false, error: "That story could not be published." };
+
+    revalidateScheduled(scheduled);
+    // The database clock can be a couple of seconds ahead of this process.
+    // Treat a slot that close as already public.
+    const visibleAt = new Date(Date.now() + 5000);
+    const live = scheduled.find((row) => Date.parse(row.publish_at) <= visibleAt.getTime());
+    return {
+      ok: true,
+      message: formatDripMessage(
+        scheduled.map((row) => new Date(row.publish_at)),
+        visibleAt
+      ),
+      postId: live?.post_id,
+    };
+  }
+
+  return { ok: false, error: "The schedule changed. Publish again." };
 }
 
 export async function deleteDigestStory(id: string): Promise<DigestActionResult> {
@@ -89,6 +258,15 @@ export async function deleteDigestStory(id: string): Promise<DigestActionResult>
 }
 
 export async function publishDigestStory(id: string): Promise<DigestActionResult> {
+  return scheduleDigestStories([id]);
+}
+
+export async function publishDigestStories(ids: string[]): Promise<DigestActionResult> {
+  if (!Array.isArray(ids)) return { ok: false, error: "That story could not be found." };
+  return scheduleDigestStories(ids);
+}
+
+export async function releaseDigestStoryNow(id: string): Promise<DigestActionResult> {
   if (!STORY_ID.test(id)) return { ok: false, error: "That story could not be found." };
 
   const { supabase, error } = await adminClient();
@@ -96,22 +274,41 @@ export async function publishDigestStory(id: string): Promise<DigestActionResult
     return { ok: false, error: error ?? "You need an admin account to do that." };
   }
 
-  const { data, error: publishError } = await supabase.rpc("publish_digest_story", {
-    p_id: id,
-  });
-
-  if (publishError) {
-    console.error("Could not publish a digest story:", publishError.message);
-    return { ok: false, error: actionError(publishError) };
+  const { data, error: releaseError } = await supabase.rpc("release_digest_story_now", { p_id: id });
+  if (releaseError) {
+    console.error("Could not release a digest story:", releaseError.message);
+    return { ok: false, error: actionError(releaseError) };
   }
 
-  const postId = Number(data);
+  const postId = Number(data && typeof data === "object" ? (data as { post_id?: unknown }).post_id : NaN);
   if (!Number.isInteger(postId) || postId <= 0) {
-    return { ok: false, error: "That story could not be published." };
+    return { ok: false, error: "That story could not be released." };
   }
 
   revalidateDigest(true, postId);
-  return { ok: true, message: "Published.", postId };
+  return { ok: true, message: "Released. It is on the site now.", postId };
+}
+
+export async function unscheduleDigestStory(id: string): Promise<DigestActionResult> {
+  if (!STORY_ID.test(id)) return { ok: false, error: "That story could not be found." };
+
+  const { supabase, error } = await adminClient();
+  if (error || !supabase) {
+    return { ok: false, error: error ?? "You need an admin account to do that." };
+  }
+
+  const { data, error: unscheduleError } = await supabase.rpc("unschedule_digest_story", { p_id: id });
+  if (unscheduleError) {
+    console.error("Could not unschedule a digest story:", unscheduleError.message);
+    return { ok: false, error: actionError(unscheduleError) };
+  }
+
+  const postId = Number(data && typeof data === "object" ? (data as { post_id?: unknown }).post_id : NaN);
+  revalidatePath("/admin");
+  revalidatePath("/admin/review");
+  revalidatePublicStories(Number.isInteger(postId) && postId > 0 ? postId : undefined);
+  revalidateUserProfile(DIGEST_BOT_USERNAME);
+  return { ok: true, message: "Unscheduled. It is back in the waiting list and off the site." };
 }
 
 export async function setDigestStoryPolitics(

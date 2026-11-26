@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { PostWithStats } from "@/lib/posts";
-import { formatTimeAgo } from "@/lib/time";
+import { formatTimeAgo, storyReleasedAt } from "@/lib/time";
 import LivePoints from "./LivePoints";
 import PoliticsBadge from "./PoliticsBadge";
 import StoryStateLine from "./StoryStateLine";
@@ -45,7 +45,7 @@ export default function PostItem({ post, rank }: PostItemProps) {
           <Link href={`/user/${post.author_username}`} className="hover:underline">
             {post.author_username}
           </Link>{" "}
-          {formatTimeAgo(post.created_at)} |{" "}
+          {formatTimeAgo(storyReleasedAt(post))} |{" "}
           <Link href={`/item/${post.id}`} className="hover:underline">
             {post.comment_count} {post.comment_count === 1 ? "comment" : "comments"}
           </Link>
