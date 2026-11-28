@@ -40,7 +40,7 @@ test("legal drafts fit the pages table and do not contain the placeholder word",
     assert.ok(body.length <= 20000);
     assert.equal(/placeholder/i.test(body), false);
   }
-  assert.match(PRIVACY_BODY, /October 18, 2026/);
+  assert.match(PRIVACY_BODY, /November 28, 2026/);
   assert.match(TERMS_BODY, /October 18, 2026/);
   assert.match(TERMS_BODY, /\[DESIGNATED AGENT NAME\]/);
   assert.match(TERMS_BODY, /\[STATE\]/);

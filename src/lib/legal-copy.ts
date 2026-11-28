@@ -3,7 +3,7 @@ export const PRIVACY_TITLE = "Privacy Policy";
 export const PRIVACY_SUBTITLE =
   "How Cornhole Media handles information on Cornhole News.";
 
-export const PRIVACY_BODY = `Effective date: October 18, 2026.
+export const PRIVACY_BODY = `Effective date: November 28, 2026.
 
 Cornhole Media ("we", "us") operates Cornhole News at https://cornholenews.news. The site is a news and discussion community for the 12 Midwestern states, where people share links, posts, and comments. This policy says what we collect, why we collect it, who helps us run the site, and how you can reach us.
 
@@ -21,7 +21,7 @@ We collect what the site needs in order to work:
 - **Contact form.** Name, email address, subject if you include one, and your message. We email that message to the operator's contact inbox and keep a copy. We also store a one-way hash of the IP address, not the address itself, so we can limit repeated submissions.
 - **Job postings.** When an employer posts a job, we collect the job title, company name, an optional company website, the city and Midwest state, whether the work is on-site, hybrid, or remote, the employment type, optional pay details, the job description, and how to apply (a web link, an email address, or both). We also collect the poster's name and email so we can review the posting and contact them. The poster's name and email are not shown on the public job page. We store the same kind of IP hash as on the contact form.
 - **Server logs.** Our host keeps basic technical logs, such as the browser type, the time, and the page requested, to keep the site secure and running.
-- **Analytics.** We use Vercel Web Analytics. It is cookieless. It does not record your session and it does not replay what you do on the page. It gives us aggregate counts, such as how many people opened a page.
+- **Analytics.** We use Vercel Web Analytics. It is cookieless. It does not record your session and it does not replay what you do on the page. It gives us aggregate counts, such as how many people opened a page. We also use Google Analytics, which uses cookies, to count visits.
 - **Bot check.** When the check is turned on, signup, login, password reset, and the public forms ask Cloudflare Turnstile whether a person submitted them. This is not used for advertising.
 
 The site has no paid plans, so we do not collect payment card numbers.
@@ -45,13 +45,14 @@ We do not sell personal information. These companies process it for us so the si
 
 - **Supabase** stores the database and runs account login. Resume files from older job applications, if any were uploaded, stay in a private storage bucket.
 - **Vercel** hosts the website and provides the cookieless analytics described above.
+- **Google** provides Google Analytics, which uses cookies to count visits.
 - **Resend** delivers contact-form messages, new job-posting notices, and newsletter mail.
 
 We may also disclose information if the law requires it, or to protect the site and its users from abuse.
 
 ## Cookies
 
-We use cookies only to keep you signed in. Those are authentication session cookies from Supabase. We do not use advertising cookies. We do not use session-replay tools or cross-site tracking.
+We use cookies to keep you signed in, and Google Analytics uses cookies to count visits. Sign-in cookies are authentication session cookies from Supabase. We do not use advertising cookies. We do not use session-replay tools or cross-site tracking.
 
 ## How long we keep it
 
