@@ -459,4 +459,6 @@ Optional local values in `.env.local`:
 
 Vercel Web Analytics is included in the site. In the Vercel project, open
 **Analytics** and turn it on if the dashboard asks you to.
+Google Analytics 4 loads on public pages from `NEXT_PUBLIC_GA_MEASUREMENT_ID`,
+or `G-XR4ECDH5BR` when that variable is unset. Pages under `/admin` are not tracked.
 Open [http://localhost:3000](http://localhost:3000)

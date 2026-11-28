@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
+import PublicGoogleAnalytics from "@/components/PublicGoogleAnalytics";
 import "./globals.css";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import Header from "@/components/Header";
@@ -105,6 +106,7 @@ export default function RootLayout({
           </div>
         </footer>
         <Analytics />
+        <PublicGoogleAnalytics />
       </body>
     </html>
   );
